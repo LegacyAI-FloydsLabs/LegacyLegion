@@ -32,8 +32,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
     aiAssessedAt: lead.aiAssessedAt?.toISOString() ?? null,
     wonAt: lead.wonAt?.toISOString() ?? null,
     lostAt: lead.lostAt?.toISOString() ?? null,
-    notes: lead.notes.map((n) => ({ ...n, createdAt: n.createdAt.toISOString() })),
-    activities: lead.activities.map((a) => ({ ...a, createdAt: a.createdAt.toISOString() })),
+    notes: lead.notes.map((n: any) => ({ ...n, createdAt: n.createdAt.toISOString() })),
+    activities: lead.activities.map((a: any) => ({ ...a, createdAt: a.createdAt.toISOString() })),
   }
 
   return <LeadDetail lead={safeLead as any} teamMembers={users} />

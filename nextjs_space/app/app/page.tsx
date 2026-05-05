@@ -18,20 +18,20 @@ export default async function DashboardPage() {
   ])
 
   const total = leads.length
-  const won = leads.filter(l => l.status === 'WON').length
-  const lost = leads.filter(l => l.status === 'LOST').length
+  const won = leads.filter((l: any) => l.status === 'WON').length
+  const lost = leads.filter((l: any) => l.status === 'LOST').length
   const active = total - won - lost
   const winRate = total > 0 ? Math.round((won / Math.max(1, won + lost)) * 100) : 0
   const pipelineValue = leads
-    .filter(l => l.status !== 'WON' && l.status !== 'LOST')
-    .reduce((sum, l) => sum + (l.estimatedMRR ?? 0), 0)
+    .filter((l: any) => l.status !== 'WON' && l.status !== 'LOST')
+    .reduce((sum: number, l: any) => sum + (l.estimatedMRR ?? 0), 0)
   const wonMRR = leads
-    .filter(l => l.status === 'WON')
-    .reduce((sum, l) => sum + (l.signedMRR ?? l.estimatedMRR ?? 0), 0)
+    .filter((l: any) => l.status === 'WON')
+    .reduce((sum: number, l: any) => sum + (l.signedMRR ?? l.estimatedMRR ?? 0), 0)
 
   return (
     <DashboardClient
-      leads={leads.map(l => ({ ...l, createdAt: l.createdAt.toISOString() }))}
+      leads={leads.map((l: any) => ({ ...l, createdAt: l.createdAt.toISOString() }))}
       stats={{ total, won, lost, active, winRate, pipelineValue, wonMRR, partners }}
     />
   )

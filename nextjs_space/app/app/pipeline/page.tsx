@@ -14,6 +14,6 @@ export default async function PipelinePage() {
     },
   })
   return (
-    <Pipeline leads={leads.map(l => ({ ...l, createdAt: l.createdAt.toISOString() }))} />
+    <Pipeline leads={leads.map((l: any) => ({ ...l, createdAt: l.createdAt.toISOString() }))} />
   )
 }

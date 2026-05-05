@@ -63,11 +63,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   })
 
-  const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+  const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'gpt-5.4-mini',
+      model: 'route-llm',
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: userPrompt },

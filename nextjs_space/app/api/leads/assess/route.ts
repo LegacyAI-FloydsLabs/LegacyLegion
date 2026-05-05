@@ -43,11 +43,11 @@ ${intelligenceContext}
 
 Write the assessment now.`
 
-  const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+  const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'gpt-5.4-mini',
+      model: 'route-llm',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

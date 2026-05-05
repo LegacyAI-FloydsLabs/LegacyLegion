@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     data: { sessionId: session.id, role: 'user', content: userMessage },
   })
 
-  const history = (session?.messages ?? []).map((m) => ({ role: m.role, content: m.content }))
+  const history = (session?.messages ?? []).map((m: any) => ({ role: m.role, content: m.content }))
   history.push({ role: 'user', content: userMessage })
 
   const upstream = await fetch(resolveAgentUrl(req), {

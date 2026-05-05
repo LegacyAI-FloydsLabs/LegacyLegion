@@ -12,5 +12,5 @@ export default async function AnalyticsPage() {
       estimatedMRR: true, signedMRR: true, createdAt: true, lostReason: true,
     },
   })
-  return <AnalyticsClient leads={leads.map(l => ({ ...l, createdAt: l.createdAt.toISOString() }))} />
+  return <AnalyticsClient leads={leads.map((l: any) => ({ ...l, createdAt: l.createdAt.toISOString() }))} />
 }

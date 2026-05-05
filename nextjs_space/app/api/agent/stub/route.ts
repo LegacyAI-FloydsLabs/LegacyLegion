@@ -41,13 +41,13 @@ export async function POST(req: NextRequest) {
   ]
 
   if (!stream) {
-    const res = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+    const res = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ model: 'gpt-5.4-mini', messages, max_tokens: 600 }),
+      body: JSON.stringify({ model: 'route-llm', messages, max_tokens: 600 }),
     })
     const data = await res.json().catch(() => ({}))
     return new Response(JSON.stringify(data), {
@@ -55,14 +55,14 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+  const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-5.4-mini',
+      model: 'route-llm',
       messages,
       stream: true,
       max_tokens: 800,

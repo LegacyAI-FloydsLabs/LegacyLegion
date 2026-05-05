@@ -22,14 +22,14 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
         updatedAt: client.updatedAt.toISOString(),
         onboardedAt: client.onboardedAt?.toISOString() ?? null,
         churnedAt: client.churnedAt?.toISOString() ?? null,
-        workOrders: client.workOrders.map(w => ({
+        workOrders: client.workOrders.map((w: any) => ({
           ...w,
           createdAt: w.createdAt.toISOString(),
           updatedAt: w.updatedAt.toISOString(),
           generatedAt: w.generatedAt?.toISOString() ?? null,
           deliveredAt: w.deliveredAt?.toISOString() ?? null,
         })),
-        clientNotes: client.clientNotes.map(n => ({
+        clientNotes: client.clientNotes.map((n: any) => ({
           ...n,
           createdAt: n.createdAt.toISOString(),
         })),

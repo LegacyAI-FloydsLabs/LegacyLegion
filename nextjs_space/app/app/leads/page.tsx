@@ -10,7 +10,7 @@ export default async function LeadsPage() {
     include: { assignedTo: { select: { id: true, name: true, email: true } } },
   })
   return <LeadsList
-    leads={leads.map(l => ({
+    leads={leads.map((l: any) => ({
       id: l.id, businessName: l.businessName, ownerName: l.ownerName, email: l.email,
       phone: l.phone, industry: l.industry, status: l.status, source: l.source,
       score: l.score, qualification: l.qualification, proposedTier: l.proposedTier,
