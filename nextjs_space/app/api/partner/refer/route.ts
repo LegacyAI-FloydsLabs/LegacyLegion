@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { scoreLead, suggestTier } from '@/lib/scoring';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,35 +16,31 @@ export async function POST(req: NextRequest) {
   const submission = await prisma.referralSubmission.create({
     data: {
       partnerId: partner.id,
-      clientName: body?.clientName ?? null,
-      clientEmail,
-      clientCompany: body?.clientCompany ?? null,
-      clientPhone: body?.clientPhone ?? null,
+      contactName: body?.clientName ?? 'Unknown',
+      contactEmail: clientEmail,
+      contactPhone: body?.clientPhone ?? null,
+      businessName: body?.clientCompany ?? body?.clientName ?? clientEmail,
       notes: body?.notes ?? null,
-      status: 'NEW',
+      status: 'PENDING',
     },
   });
-  // Auto-create a Lead with REFERRAL source
-  const input: any = { email: clientEmail, name: body?.clientName ?? null, company: body?.clientCompany ?? null, phone: body?.clientPhone ?? null, source: 'REFERRAL' };
-  const sc = scoreLead(input);
-  const tier = suggestTier(input, sc.total);
-  await prisma.lead.upsert({
-    where: { email: clientEmail },
-    update: {},
-    create: {
-      email: clientEmail,
-      name: body?.clientName ?? null,
-      company: body?.clientCompany ?? null,
-      phone: body?.clientPhone ?? null,
-      source: 'REFERRAL',
-      referralCode: partner.referralCode,
-      score: sc.total,
-      qualification: sc.qualification,
-      scoreBreakdown: sc.breakdown as any,
-      proposedTier: tier,
-      stage: 'NEW',
-      activities: { create: { type: 'REFERRED', message: `Referred by partner ${partner.referralCode}` } },
-    },
-  }).catch(() => null);
+  // Auto-create lead
+  const exists = await prisma.lead.findFirst({ where: { email: clientEmail } }).catch(() => null);
+  if (!exists) {
+    await prisma.lead.create({
+      data: {
+        email: clientEmail,
+        businessName: body?.clientCompany ?? body?.clientName ?? clientEmail,
+        ownerName: body?.clientName ?? 'Unknown',
+        industry: 'OTHER',
+        phone: body?.clientPhone ?? null,
+        source: 'REFERRAL',
+        status: 'NEW',
+        score: 60,
+        qualification: 'MQL',
+        referralPartnerId: partner.id,
+      },
+    }).catch(() => null);
+  }
   return NextResponse.json({ ok: true, submission });
 }
