@@ -13,3 +13,4 @@ build/
 tsconfig.tsbuildinfo
 **/.yarn/global/
 **/.yarn/install-state.gz
+.floyd/*.hostedapp-symlink
