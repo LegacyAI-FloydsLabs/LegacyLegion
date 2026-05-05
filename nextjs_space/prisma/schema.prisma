@@ -1,0 +1,233 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/legacy_legion/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ============== AUTH (NextAuth) ==============
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          String    @default("team") // "admin" | "team" | "partner"
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  assignedLeads   Lead[]    @relation("AssignedTo")
+  notes           Note[]
+  activities      Activity[]
+  referralPartner ReferralPartner?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+// ============== CORE LEAD ==============
+
+model Lead {
+  id                String   @id @default(cuid())
+  businessName      String
+  ownerName         String
+  email             String
+  phone             String?
+  industry          String   // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
+  city              String?
+  state             String?
+  currentMarketingSpend String? // "<500" | "500-2000" | "2000-5000" | "5000-10000" | "10000+"
+  revenueRange      String?     // "<500K" | "500K-1M" | "1M-5M" | "5M-20M" | "20M+"
+  employeeCount     String?     // "1-4" | "5-15" | "16-50" | "51-150" | "150+"
+  biggestPainPoint  String?  @db.Text
+  currentProvider   String?
+  website           String?
+
+  // Pipeline
+  status            String   @default("NEW") // NEW | CONTACTED | DISCOVERY | PROPOSAL | NEGOTIATION | WON | LOST
+  source            String   @default("WEB_FORM") // WEB_FORM | CHAT_WIDGET | REFERRAL | MANUAL | CSV_IMPORT | LINKEDIN
+  channel           String?  // organic, paid, referral, etc.
+
+  // Scoring
+  score             Int      @default(0) // 0-100
+  scoreBreakdown    Json?
+  qualification     String?  // MQL | SQL | DISQUALIFIED
+
+  // Pipeline value
+  estimatedMRR      Int?
+  proposedTier      String?  // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
+
+  // AI Assessment
+  aiAssessment      String?  @db.Text
+  aiAssessmentJson  Json?
+  aiAssessedAt      DateTime?
+
+  // Assignment
+  assignedToId      String?
+  assignedTo        User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  // Referral attribution
+  referralPartnerId String?
+  referralPartner   ReferralPartner? @relation(fields: [referralPartnerId], references: [id])
+
+  // Won/Lost
+  wonAt             DateTime?
+  lostAt            DateTime?
+  lostReason        String?
+  signedTier        String?
+  signedMRR         Int?
+
+  notes             Note[]
+  activities        Activity[]
+  chatSessions      ChatSession[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status])
+  @@index([source])
+  @@index([industry])
+  @@index([createdAt])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String
+  body      String   @db.Text
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  @@index([leadId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String?
+  type      String   // CALL | EMAIL | MEETING | STATUS_CHANGE | NOTE_ADDED | AI_ASSESSMENT | CHAT | SYSTEM
+  title     String
+  body      String?  @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now())
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author    User?    @relation(fields: [authorId], references: [id])
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+// ============== REFERRAL ==============
+
+model ReferralPartner {
+  id              String   @id @default(cuid())
+  userId          String?  @unique
+  user            User?    @relation(fields: [userId], references: [id])
+  name            String
+  email           String   @unique
+  phone           String?
+  company         String?
+  category        String   // INSURANCE | ACCOUNTANT | CONSULTANT | EXISTING_CLIENT | OTHER
+  tier            String   @default("BRONZE") // BRONZE | SILVER | GOLD
+  partnerCode     String   @unique
+  active          Boolean  @default(true)
+  totalReferrals  Int      @default(0)
+  wonReferrals    Int      @default(0)
+  lifetimeCommission Int   @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  leads           Lead[]
+  submissions     ReferralSubmission[]
+}
+
+model ReferralSubmission {
+  id          String   @id @default(cuid())
+  partnerId   String
+  partner     ReferralPartner @relation(fields: [partnerId], references: [id])
+  businessName String
+  contactName String
+  contactEmail String
+  contactPhone String?
+  industry    String?
+  notes       String?  @db.Text
+  status      String   @default("PENDING") // PENDING | ACCEPTED | CONTACTED | WON | LOST
+  leadId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============== CHAT WIDGET ==============
+
+model ChatSession {
+  id            String   @id @default(cuid())
+  visitorId     String   // anonymous fingerprint
+  leadId        String?
+  lead          Lead?    @relation(fields: [leadId], references: [id])
+  websiteHost   String?  // host where widget is embedded
+  qualified     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  messages      ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String   // user | assistant | system
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  @@index([sessionId])
+}
+
+// ============== UPLOADS ==============
+
+model UploadedFile {
+  id            String   @id @default(cuid())
+  filename      String
+  cloudStoragePath String  @unique
+  isPublic      Boolean  @default(false)
+  contentType   String?
+  uploadedById  String?
+  purpose       String?  // CSV_IMPORT | ATTACHMENT
+  rowsImported  Int?
+  createdAt     DateTime @default(now())
+}
