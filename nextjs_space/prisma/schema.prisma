@@ -28,6 +28,8 @@ model User {
   notes           Note[]
   activities      Activity[]
   referralPartner ReferralPartner?
+  clientNotes     ClientNote[]
+  workOrders      ClientWorkOrder[] @relation("WorkAuthor")
 }
 
 model Account {
@@ -230,4 +232,85 @@ model UploadedFile {
   purpose       String?  // CSV_IMPORT | ATTACHMENT
   rowsImported  Int?
   createdAt     DateTime @default(now())
+}
+
+// ============== AGENCY MODE (Internal LegacyAI work FOR clients) ==============
+
+model Client {
+  id              String   @id @default(cuid())
+  // From a converted lead, optional
+  fromLeadId      String?  @unique
+
+  // Identity
+  businessName    String
+  ownerName       String?
+  email           String?
+  phone           String?
+  industry        String   // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
+  city            String?
+  state           String?
+  website         String?
+  gbpUrl          String?  // Google Business Profile URL
+  facebookUrl     String?
+  linkedinUrl     String?
+
+  // Engagement
+  tier            String   @default("LAUNCH_PAD") // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
+  monthlyMRR      Int      @default(0)
+  status          String   @default("ACTIVE")     // ACTIVE | ONBOARDING | PAUSED | CHURNED
+  onboardedAt     DateTime?
+  churnedAt       DateTime?
+
+  // Strategy notes pinned at top of workspace
+  strategyBrief   String?  @db.Text
+  primaryGoals    Json?    // free-form strategic priorities
+
+  workOrders      ClientWorkOrder[]
+  clientNotes     ClientNote[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([industry])
+  @@index([createdAt])
+}
+
+model ClientWorkOrder {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId     String?
+  author       User?    @relation("WorkAuthor", fields: [authorId], references: [id])
+
+  type         String   // SEO_AUDIT | GBP_OPTIMIZATION | COMPETITOR_SWEEP | KEYWORD_RESEARCH | CONTENT_BRIEF | AD_COPY | EMAIL_CAMPAIGN | LOCAL_LANDING_PAGE | REVIEW_RESPONSE
+  title        String
+  status       String   @default("DRAFT")     // DRAFT | IN_PROGRESS | REVIEW | DELIVERED | ARCHIVED
+  inputJson    Json?    // params used to generate
+  outputMarkdown String? @db.Text             // the deliverable
+  intelligenceJson Json?                      // raw Pinecone matches used
+  tokensUsed   Int?
+  generatedAt  DateTime?
+  deliveredAt  DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ClientNote {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String   @db.Text
+  pinned    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([clientId])
 }
