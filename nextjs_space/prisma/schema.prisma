@@ -29,6 +29,7 @@ model User {
   referralPartner ReferralPartner?
   clientNotes     ClientNote[]
   workOrders      ClientWorkOrder[] @relation("WorkAuthor")
+  agentThreads   AgentThread[] @relation("UserAgentThreads")
 }
 
 model Account {
@@ -266,6 +267,7 @@ model Client {
 
   workOrders      ClientWorkOrder[]
   clientNotes     ClientNote[]
+  agentThreads   AgentThread[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -312,4 +314,36 @@ model ClientNote {
   createdAt DateTime @default(now())
 
   @@index([clientId])
+}
+
+model AgentThread {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation("UserAgentThreads", fields: [userId], references: [id], onDelete: Cascade)
+  persona      String
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title        String?
+  archivedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  turns        AgentTurn[]
+
+  @@index([userId, persona])
+  @@index([clientId])
+}
+
+model AgentTurn {
+  id            String      @id @default(cuid())
+  threadId      String
+  thread        AgentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role          String
+  content       String      @db.Text
+  toolName      String?
+  toolCallsJson Json?
+  modelUsed     String?
+  tokenUsage    Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([threadId, createdAt])
 }

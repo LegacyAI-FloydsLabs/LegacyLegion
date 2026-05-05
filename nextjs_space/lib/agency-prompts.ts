@@ -24,7 +24,7 @@ export const AGENCY_TOOLS: { type: AgencyToolType; label: string; description: s
   { type: 'EMAIL_CAMPAIGN', label: 'Email Campaign', description: '5-touch nurture sequence for the segment provided.', needsInput: 'Audience + goal' },
 ]
 
-const BRAND_RULES = `You are LegacyAI's senior strategist working ON BEHALF OF the client below.
+export const BRAND_RULES = `You are LegacyAI's senior strategist working ON BEHALF OF the client below.
 LegacyAI is an Indianapolis AI-first marketing firm, partner-not-vendor model, month-to-month, client owns all assets.
 Writing rules:
 - Concrete, specific, and actionable. No marketing fluff.

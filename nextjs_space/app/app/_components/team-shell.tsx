@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Users, KanbanSquare, BarChart3, Calculator,
   Bot, Network, Upload, LogOut, PanelLeft, Sparkles,
   Briefcase, FileSearch, Wrench, Target, Building2, ClipboardList,
-  Megaphone, ArrowRight,
+  Megaphone, ArrowRight, MessageSquare,
 } from 'lucide-react'
 
 const SALES_NAV = [
@@ -31,6 +31,7 @@ const AGENCY_NAV = [
   { href: '/app/agency', label: 'Clients', icon: Building2 },
   { href: '/app/agency/work-orders', label: 'Work Orders', icon: ClipboardList },
   { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
+  { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
   { href: '/app/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
 ]
