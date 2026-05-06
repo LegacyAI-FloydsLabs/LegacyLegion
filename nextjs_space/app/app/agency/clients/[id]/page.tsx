@@ -10,6 +10,7 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
     include: {
       workOrders: { orderBy: { createdAt: 'desc' } },
       clientNotes: { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true, email: true } } } },
+      prospects: { orderBy: { createdAt: 'desc' } },
     },
   })
   if (!client) notFound()
@@ -32,6 +33,11 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
         clientNotes: client.clientNotes.map((n: any) => ({
           ...n,
           createdAt: n.createdAt.toISOString(),
+        })),
+        prospects: client.prospects.map((p: any) => ({
+          ...p,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
         })),
       }}
     />

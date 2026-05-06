@@ -38,6 +38,21 @@ interface ClientNote {
   author?: { name: string | null; email: string | null } | null
 }
 
+interface Prospect {
+  id: string
+  source: string
+  companyName: string | null
+  companyDomain: string | null
+  personFirstName: string | null
+  personLastName: string | null
+  personTitle: string | null
+  personEmail: string | null
+  city: string | null
+  state: string | null
+  promotedToLeadId: string | null
+  createdAt: string
+}
+
 interface Client {
   id: string
   businessName: string
@@ -61,6 +76,7 @@ interface Client {
   churnedAt: string | null
   workOrders: WorkOrder[]
   clientNotes: ClientNote[]
+  prospects: Prospect[]
 }
 
 export function ClientWorkspace({ client }: { client: Client }) {
@@ -138,6 +154,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
         <TabsList>
           <TabsTrigger value="tools"><Wrench className="h-4 w-4 mr-2"/>Agency Tools</TabsTrigger>
           <TabsTrigger value="work-orders"><FileText className="h-4 w-4 mr-2"/>Work Orders ({orders.length})</TabsTrigger>
+          <TabsTrigger value="prospects"><Sparkles className="h-4 w-4 mr-2"/>Prospects ({client.prospects.length})</TabsTrigger>
           <TabsTrigger value="notes"><StickyNote className="h-4 w-4 mr-2"/>Notes ({client.clientNotes.length})</TabsTrigger>
           <TabsTrigger value="profile"><Edit3 className="h-4 w-4 mr-2"/>Profile</TabsTrigger>
         </TabsList>
@@ -146,6 +163,25 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <AgencyToolPanel client={{
             id: client.id, businessName: client.businessName, industry: client.industry, city: client.city, state: client.state,
           }} onWorkOrderCreated={handleNewWorkOrder} onOpenWorkOrder={(wo) => setActiveWorkOrder(wo)} />
+        </TabsContent>
+
+        <TabsContent value="prospects" className="mt-6 space-y-3">
+          <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-medium">Client prospecting</div>
+              <div className="text-sm text-muted-foreground">Run a focused Lead-Gen Manager search, then promote qualified prospects into Leads.</div>
+            </div>
+            <Link href={`/app/agency/chat?persona=lead-gen-manager&clientId=${client.id}`}>
+              <Button>Run Prospect Search</Button>
+            </Link>
+          </Card>
+          {client.prospects.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">No prospects persisted for this client yet.</Card>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {client.prospects.map((prospect) => <ProspectCard key={prospect.id} prospect={prospect} />)}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="work-orders" className="mt-6">
@@ -222,6 +258,29 @@ export function ClientWorkspace({ client }: { client: Client }) {
         />
       )}
     </Container>
+  )
+}
+
+function ProspectCard({ prospect }: { prospect: Prospect }) {
+  const name = [prospect.personFirstName, prospect.personLastName].filter(Boolean).join(' ')
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{prospect.source}</div>
+          <div className="font-medium truncate">{name || prospect.companyName || 'Unnamed prospect'}</div>
+          <div className="text-sm text-muted-foreground truncate">{prospect.personTitle || prospect.companyName || '—'}</div>
+        </div>
+        <Badge variant="outline" className={prospect.promotedToLeadId ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300' : ''}>
+          {prospect.promotedToLeadId ? 'Promoted' : 'Prospect'}
+        </Badge>
+      </div>
+      <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+        <div>{prospect.personEmail ?? 'No email yet'}</div>
+        <div>{prospect.companyDomain ?? prospect.companyName ?? 'No company domain'}</div>
+        <div>{[prospect.city, prospect.state].filter(Boolean).join(', ') || 'No location'}</div>
+      </div>
+    </Card>
   )
 }
 

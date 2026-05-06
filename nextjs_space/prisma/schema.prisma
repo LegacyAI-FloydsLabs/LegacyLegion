@@ -269,6 +269,7 @@ model Client {
   clientNotes     ClientNote[]
   agentThreads   AgentThread[]
 
+  prospects       Prospect[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -346,4 +347,58 @@ model AgentTurn {
   createdAt     DateTime    @default(now())
 
   @@index([threadId, createdAt])
+}
+
+model Prospect {
+  id                   String   @id @default(cuid())
+  source               String
+  sourceId             String
+  clientId             String?
+  client               Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  companyName          String?
+  companyDomain        String?
+  companyIndustry      String?
+  companyEmployeeCount Int?
+  companyRevenue       Int?
+
+  personFirstName      String?
+  personLastName       String?
+  personTitle          String?
+  personEmail          String?
+  personPhone          String?
+  personLinkedinUrl    String?
+
+  city                 String?
+  state                String?
+  country              String?
+
+  enrichedJson         Json?
+  promotedToLeadId     String?  @unique
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([source, sourceId])
+  @@index([clientId])
+  @@index([personEmail])
+  @@index([companyDomain])
+}
+
+model LeadGenCampaign {
+  id             String   @id @default(cuid())
+  ownerId        String
+  clientId       String?
+  name           String
+  source         String
+  criteriaJson   Json
+  status         String   @default("ACTIVE")
+  totalFound     Int      @default(0)
+  totalPersisted Int      @default(0)
+  lastRunAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([clientId])
 }

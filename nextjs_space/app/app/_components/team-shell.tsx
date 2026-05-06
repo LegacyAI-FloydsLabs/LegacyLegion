@@ -32,6 +32,7 @@ const AGENCY_NAV = [
   { href: '/app/agency/work-orders', label: 'Work Orders', icon: ClipboardList },
   { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
   { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
+  { href: '/app/agency/prospects', label: 'Prospects', icon: FileSearch },
   { href: '/app/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
 ]

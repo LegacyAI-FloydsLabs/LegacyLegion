@@ -2,6 +2,7 @@ import { AGENCY_TOOLS, type AgencyToolType, buildAgencyPrompt } from '@/lib/agen
 import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import type { AgentToolName } from '@/lib/agents/registry'
+import { promoteProspectToLead, ProspectSearchError, searchProspects } from '@/lib/prospects/service'
 
 export type ToolName = AgentToolName
 
@@ -64,8 +65,33 @@ export async function dispatchTool(
   args: Record<string, any>,
   ctx: ToolContext
 ): Promise<ToolResult> {
-  if (name === 'PROSPECT_SEARCH' || name === 'PROSPECT_PROMOTE') {
-    return toolError('TOOL_NOT_AVAILABLE', `${name} ships in Phase 2.`)
+  if (name === 'PROSPECT_SEARCH') {
+    try {
+      const result = await searchProspects({
+        userId: ctx.userId,
+        clientId: ctx.clientId ?? args?.clientId ?? null,
+        nlQuery: typeof args?.nlQuery === 'string' ? args.nlQuery : undefined,
+        criteria: args?.criteria,
+        source: args?.source,
+        limit: args?.limit,
+      })
+      return { ok: true, output: result, outputMarkdown: `Found ${result.counts.found}; deduped ${result.counts.deduped}; persisted ${result.counts.persisted}.` }
+    } catch (error) {
+      if (error instanceof ProspectSearchError) return toolError(error.code, error.message)
+      throw error
+    }
+  }
+
+  if (name === 'PROSPECT_PROMOTE') {
+    try {
+      const prospectId = String(args?.prospectId ?? args?.id ?? '')
+      if (!prospectId) return toolError('PROSPECT_ID_REQUIRED', 'prospectId is required.')
+      const result = await promoteProspectToLead({ userId: ctx.userId, prospectId })
+      return { ok: true, output: result, outputMarkdown: `Promoted prospect to lead ${result.leadId}.` }
+    } catch (error) {
+      if (error instanceof ProspectSearchError) return toolError(error.code, error.message)
+      throw error
+    }
   }
 
   if (!isAgencyTool(name)) return toolError('UNKNOWN_TOOL', `Unknown tool: ${name}`)

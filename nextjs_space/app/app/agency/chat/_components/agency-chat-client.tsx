@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AGENTS } from '@/lib/agents/registry'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -8,8 +9,11 @@ import { Card } from '@/components/ui/card'
 type Message = { role: 'user' | 'assistant' | 'system'; content: string }
 
 export function AgencyChatClient({ clients }: { clients: { id: string; businessName: string }[] }) {
-  const [persona, setPersona] = useState('marketing-guru')
-  const [clientId, setClientId] = useState('')
+  const searchParams = useSearchParams()
+  const initialPersona = searchParams.get('persona') ?? 'marketing-guru'
+  const initialClientId = searchParams.get('clientId') ?? ''
+  const [persona, setPersona] = useState(AGENTS.some((agent) => agent.id === initialPersona) ? initialPersona : 'marketing-guru')
+  const [clientId, setClientId] = useState(clients.some((client) => client.id === initialClientId) ? initialClientId : '')
   const [message, setMessage] = useState('')
   const [threadId, setThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
