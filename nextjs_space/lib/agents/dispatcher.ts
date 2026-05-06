@@ -100,7 +100,7 @@ export async function dispatchTool(
   const apiKey = process.env.ABACUSAI_API_KEY
   if (!apiKey) return toolError('ROUTELLM_NOT_CONFIGURED', 'ABACUSAI_API_KEY is not configured.')
 
-  const client = await prisma.client.findUnique({ where: { id: ctx.clientId } })
+  const client = await prisma.client.findUnique({ where: { id: ctx.clientId }, include: { intelligence: true } })
   if (!client) return toolError('CLIENT_NOT_FOUND', `Client not found: ${ctx.clientId}`)
 
   const prompt = buildAgencyPrompt(name, {
@@ -114,6 +114,7 @@ export async function dispatchTool(
       tier: client.tier,
       monthlyMRR: client.monthlyMRR,
       strategyBrief: client.strategyBrief,
+      liveGBP: client.intelligence?.gbpSnapshotJson as any,
     },
     intelligenceContext: '',
     userInput: String(args?.userInput ?? args?.input ?? '').trim(),

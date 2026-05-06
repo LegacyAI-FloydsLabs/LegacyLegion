@@ -270,6 +270,7 @@ model Client {
   agentThreads   AgentThread[]
 
   prospects       Prospect[]
+  intelligence    ClientIntelligence?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -401,4 +402,18 @@ model LeadGenCampaign {
 
   @@index([ownerId])
   @@index([clientId])
+}
+
+
+model ClientIntelligence {
+  id              String   @id @default(cuid())
+  clientId        String   @unique
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  gbpSnapshotJson Json?
+  gscSummaryJson  Json?
+  fetchedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fetchedAt])
 }

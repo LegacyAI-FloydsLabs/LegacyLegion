@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/agency/intelligence/refresh-all",
+      "schedule": "30 11,12 * * *"
+    }
+  ]
+}

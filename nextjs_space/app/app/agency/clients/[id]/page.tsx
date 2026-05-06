@@ -11,6 +11,7 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
       workOrders: { orderBy: { createdAt: 'desc' } },
       clientNotes: { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true, email: true } } } },
       prospects: { orderBy: { createdAt: 'desc' } },
+      intelligence: true,
     },
   })
   if (!client) notFound()
@@ -39,6 +40,11 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
           createdAt: p.createdAt.toISOString(),
           updatedAt: p.updatedAt.toISOString(),
         })),
+        intelligence: client.intelligence ? {
+          gbpSnapshotJson: client.intelligence.gbpSnapshotJson,
+          gscSummaryJson: client.intelligence.gscSummaryJson,
+          fetchedAt: client.intelligence.fetchedAt.toISOString(),
+        } : null,
       }}
     />
   )

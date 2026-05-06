@@ -44,9 +44,23 @@ interface BuildArgs {
     tier?: string | null
     monthlyMRR?: number | null
     strategyBrief?: string | null
+    liveGBP?: {
+      name?: string | null
+      rating?: number | null
+      reviewCount?: number | null
+      photoCount?: number | null
+      primaryCategory?: string | null
+      categories?: string[] | null
+      fetchedAt?: string | null
+    } | null
   }
   intelligenceContext: string
   userInput?: string
+}
+
+function liveGbpBlock(snapshot: BuildArgs['client']['liveGBP']) {
+  if (!snapshot) return ''
+  return `\n<LIVE_GBP>\n- Name: ${snapshot.name ?? 'unknown'}\n- Primary category: ${snapshot.primaryCategory ?? 'unknown'}\n- Categories: ${(snapshot.categories ?? []).join(', ') || 'unknown'}\n- Rating: ${snapshot.rating ?? 'unknown'}\n- Review count: ${snapshot.reviewCount ?? 0}\n- Photo count: ${snapshot.photoCount ?? 0}\n- Fetched at: ${snapshot.fetchedAt ?? 'unknown'}\n</LIVE_GBP>`
 }
 
 function clientHeader(c: BuildArgs['client'], intelligenceContext: string): string {
@@ -59,8 +73,10 @@ function clientHeader(c: BuildArgs['client'], intelligenceContext: string): stri
 - Tier: ${c.tier ?? 'LAUNCH_PAD'} (${c.monthlyMRR ?? 0}/mo MRR)
 - Strategy brief: ${c.strategyBrief || 'none yet'}
 
+<INTELLIGENCE>
 LegacyAI knowledge-base context (top matches):
-${intelligenceContext || '[no indexed insights matched — proceed using best practice]'}
+${intelligenceContext || '[no indexed insights matched — proceed using best practice]'}${liveGbpBlock(c.liveGBP)}
+</INTELLIGENCE>
 `
 }
 

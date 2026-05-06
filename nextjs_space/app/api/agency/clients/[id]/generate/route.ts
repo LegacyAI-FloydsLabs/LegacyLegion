@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const userInput = String(body?.input ?? '').trim()
   if (!VALID_TYPES.has(type)) return new Response('Invalid tool type', { status: 400 })
 
-  const client = await prisma.client.findUnique({ where: { id: params.id } })
+  const client = await prisma.client.findUnique({ where: { id: params.id }, include: { intelligence: true } })
   if (!client) return new Response('Client not found', { status: 404 })
 
   // Build prompt
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       tier: client.tier,
       monthlyMRR: client.monthlyMRR,
       strategyBrief: client.strategyBrief,
+      liveGBP: client.intelligence?.gbpSnapshotJson as any,
     },
     intelligenceContext: '',
     userInput,

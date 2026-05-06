@@ -53,6 +53,12 @@ interface Prospect {
   createdAt: string
 }
 
+interface ClientIntelligence {
+  gbpSnapshotJson: any | null
+  gscSummaryJson: any | null
+  fetchedAt: string
+}
+
 interface Client {
   id: string
   businessName: string
@@ -77,6 +83,7 @@ interface Client {
   workOrders: WorkOrder[]
   clientNotes: ClientNote[]
   prospects: Prospect[]
+  intelligence: ClientIntelligence | null
 }
 
 export function ClientWorkspace({ client }: { client: Client }) {
@@ -85,6 +92,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
   const [optimisticOrders, setOptimisticOrders] = useState<WorkOrder[]>(client.workOrders)
   const [noteText, setNoteText] = useState('')
   const [busyNote, setBusyNote] = useState(false)
+  const [busyIntelligence, setBusyIntelligence] = useState(false)
 
   const orders = optimisticOrders
   const inProgress = orders.filter(o => o.status === 'IN_PROGRESS' || o.status === 'REVIEW').length
@@ -123,6 +131,37 @@ export function ClientWorkspace({ client }: { client: Client }) {
     if (res.ok) { toast.success('Client deleted'); router.push('/app/agency') } else toast.error('Failed')
   }
 
+  async function refreshIntelligence() {
+    setBusyIntelligence(true)
+    try {
+      const res = await fetch(`/api/agency/clients/${client.id}/intelligence/refresh`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success('GBP snapshot refreshed')
+      router.refresh()
+    } catch {
+      toast.error('Could not refresh GBP snapshot')
+    } finally {
+      setBusyIntelligence(false)
+    }
+  }
+
+  async function uploadGscExport(file: File | null) {
+    if (!file) return
+    setBusyIntelligence(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`/api/agency/clients/${client.id}/intelligence/gsc-export`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success('GSC export imported')
+      router.refresh()
+    } catch {
+      toast.error('Could not import GSC export')
+    } finally {
+      setBusyIntelligence(false)
+    }
+  }
+
   return (
     <Container size="xl">
       <div className="mb-3">
@@ -155,6 +194,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <TabsTrigger value="tools"><Wrench className="h-4 w-4 mr-2"/>Agency Tools</TabsTrigger>
           <TabsTrigger value="work-orders"><FileText className="h-4 w-4 mr-2"/>Work Orders ({orders.length})</TabsTrigger>
           <TabsTrigger value="prospects"><Sparkles className="h-4 w-4 mr-2"/>Prospects ({client.prospects.length})</TabsTrigger>
+          <TabsTrigger value="intelligence"><Sparkles className="h-4 w-4 mr-2"/>Intelligence</TabsTrigger>
           <TabsTrigger value="notes"><StickyNote className="h-4 w-4 mr-2"/>Notes ({client.clientNotes.length})</TabsTrigger>
           <TabsTrigger value="profile"><Edit3 className="h-4 w-4 mr-2"/>Profile</TabsTrigger>
         </TabsList>
@@ -163,6 +203,16 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <AgencyToolPanel client={{
             id: client.id, businessName: client.businessName, industry: client.industry, city: client.city, state: client.state,
           }} onWorkOrderCreated={handleNewWorkOrder} onOpenWorkOrder={(wo) => setActiveWorkOrder(wo)} />
+        </TabsContent>
+
+        <TabsContent value="intelligence" className="mt-6 space-y-4">
+          <IntelligencePanel
+            intelligence={client.intelligence}
+            hasGbpUrl={Boolean(client.gbpUrl)}
+            busy={busyIntelligence}
+            onRefresh={refreshIntelligence}
+            onUploadGsc={uploadGscExport}
+          />
         </TabsContent>
 
         <TabsContent value="prospects" className="mt-6 space-y-3">
@@ -258,6 +308,87 @@ export function ClientWorkspace({ client }: { client: Client }) {
         />
       )}
     </Container>
+  )
+}
+
+function IntelligencePanel({
+  intelligence, hasGbpUrl, busy, onRefresh, onUploadGsc,
+}: {
+  intelligence: ClientIntelligence | null
+  hasGbpUrl: boolean
+  busy: boolean
+  onRefresh: () => void
+  onUploadGsc: (file: File | null) => void
+}) {
+  const gbp = intelligence?.gbpSnapshotJson ?? null
+  const gsc = intelligence?.gscSummaryJson ?? null
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-medium">GBP live snapshot</div>
+            <div className="text-sm text-muted-foreground">Public Google Business Profile data only; no review scraping or OAuth.</div>
+          </div>
+          <Button onClick={onRefresh} disabled={busy || !hasGbpUrl}>{busy ? 'Refreshing…' : 'Refresh GBP'}</Button>
+        </div>
+        {!hasGbpUrl && <div className="mt-3 text-sm text-amber-300">Add a Google Business Profile URL in the Profile tab before refreshing.</div>}
+        {gbp ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Reviews" value={String(gbp.reviewCount ?? 0)} />
+            <MetricCard label="Photos" value={String(gbp.photoCount ?? 0)} />
+            <MetricCard label="Category" value={gbp.primaryCategory ?? '—'} />
+            <MetricCard label="Rating" value={gbp.rating ? String(gbp.rating) : '—'} />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No GBP snapshot persisted yet.</div>
+        )}
+      </Card>
+
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-medium">GSC CSV summary</div>
+            <div className="text-sm text-muted-foreground">Upload Search Console exports with Date, Query, Clicks, Impressions, CTR, Position.</div>
+          </div>
+          <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onUploadGsc(event.target.files?.[0] ?? null)} className="max-w-xs" />
+        </div>
+        {gsc ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3 lg:col-span-2">
+              <MetricCard label="Rows" value={String(gsc.rowCount ?? 0)} />
+              <MetricCard label="Queries" value={String(gsc.queryCount ?? 0)} />
+              <MetricCard label="Clicks" value={String(gsc.totalClicks ?? 0)} />
+            </div>
+            <QueryDeltaList title="Top movers" rows={gsc.topMovers ?? []} empty="No improving queries found." />
+            <QueryDeltaList title="Lost queries" rows={gsc.lostQueries ?? []} empty="No declining queries found." />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No GSC export imported yet.</div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return <Card className="p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 text-lg font-semibold">{value}</div></Card>
+}
+
+function QueryDeltaList({ title, rows, empty }: { title: string; rows: any[]; empty: string }) {
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium">{title}</div>
+      <div className="space-y-2">
+        {rows.slice(0, 5).map((row) => (
+          <Card key={row.query} className="p-3 text-sm">
+            <div className="font-medium">{row.query}</div>
+            <div className="text-xs text-muted-foreground">Clicks {row.clicksDelta >= 0 ? '+' : ''}{row.clicksDelta}; position {row.positionDelta >= 0 ? '+' : ''}{Number(row.positionDelta).toFixed(1)}</div>
+          </Card>
+        ))}
+        {rows.length === 0 && <div className="text-sm text-muted-foreground">{empty}</div>}
+      </div>
+    </div>
   )
 }
 
