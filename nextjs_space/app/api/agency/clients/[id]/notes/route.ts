@@ -22,6 +22,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
     include: { author: { select: { name: true, email: true } } },
   })
-  await upsertClientNoteMemory(note.id)
-  return NextResponse.json({ note })
+  const memory = await upsertClientNoteMemory(note.id)
+  return NextResponse.json({ note, memory })
 }

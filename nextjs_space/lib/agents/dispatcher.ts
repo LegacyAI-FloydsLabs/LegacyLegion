@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import type { AgentToolName } from '@/lib/agents/registry'
 import { promoteProspectToLead, ProspectSearchError, searchProspects } from '@/lib/prospects/service'
-import { upsertClientWorkOrderMemory } from '@/lib/agents/memory'
+import { upsertClientWorkOrderMemory, type AgentMemoryWriteResult } from '@/lib/agents/memory'
 
 export type ToolName = AgentToolName
 
@@ -18,6 +18,7 @@ export interface ToolResult {
   output?: any
   outputMarkdown?: string
   workOrderId?: string
+  memory?: AgentMemoryWriteResult | { ok: boolean; skipped: true; reason: string }
   error?: { code: string; message: string }
 }
 
@@ -168,8 +169,9 @@ export async function dispatchTool(
       generatedAt: outputMarkdown ? new Date() : null,
     },
   })
+  let memory
   if (outputMarkdown) {
-    await upsertClientWorkOrderMemory(workOrder.id)
+    memory = await upsertClientWorkOrderMemory(workOrder.id)
   }
 
   return {
@@ -177,6 +179,7 @@ export async function dispatchTool(
     output: { type: name, clientId: client.id },
     outputMarkdown,
     workOrderId: workOrder.id,
+    memory,
     error: outputMarkdown ? undefined : { code: 'EMPTY_GENERATION', message: 'RouteLLM returned an empty response.' },
   }
 }

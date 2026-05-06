@@ -21,8 +21,8 @@ export async function refreshClientGBP(clientId: string) {
     create: { clientId: client.id, gbpSnapshotJson: snapshot as any, fetchedAt: new Date(snapshot.fetchedAt) },
     update: { gbpSnapshotJson: snapshot as any, fetchedAt: new Date(snapshot.fetchedAt) },
   })
-  await upsertClientIntelligenceMemory(client.id)
-  return snapshot
+  const memory = await upsertClientIntelligenceMemory(client.id)
+  return { snapshot, memory }
 }
 
 export async function saveClientGscSummary(clientId: string, csvText: string) {
@@ -35,8 +35,8 @@ export async function saveClientGscSummary(clientId: string, csvText: string) {
     create: { clientId: client.id, gscSummaryJson: summary as any, fetchedAt: new Date() },
     update: { gscSummaryJson: summary as any, fetchedAt: new Date() },
   })
-  await upsertClientIntelligenceMemory(client.id)
-  return summary
+  const memory = await upsertClientIntelligenceMemory(client.id)
+  return { summary, memory }
 }
 
 export async function refreshAllActiveClientGBP() {
@@ -48,7 +48,8 @@ export async function refreshAllActiveClientGBP() {
   const results: { clientId: string; businessName: string; ok: boolean; snapshot?: GBPSnapshot; error?: string }[] = []
   for (const client of clients) {
     try {
-      results.push({ clientId: client.id, businessName: client.businessName, ok: true, snapshot: await refreshClientGBP(client.id) })
+      const refreshed = await refreshClientGBP(client.id)
+      results.push({ clientId: client.id, businessName: client.businessName, ok: true, snapshot: refreshed.snapshot })
     } catch (error: any) {
       results.push({ clientId: client.id, businessName: client.businessName, ok: false, error: error?.message ?? 'GBP refresh failed' })
     }

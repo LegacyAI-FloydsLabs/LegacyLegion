@@ -30,10 +30,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if ('outputMarkdown' in body) allowed.outputMarkdown = body.outputMarkdown
   if (allowed.status === 'DELIVERED') allowed.deliveredAt = new Date()
   const item = await prisma.clientWorkOrder.update({ where: { id: params.id }, data: allowed })
-  if (item.outputMarkdown && ['REVIEW', 'DELIVERED'].includes(item.status)) {
-    await upsertClientWorkOrderMemory(item.id)
-  }
-  return NextResponse.json({ item })
+  const memory = item.outputMarkdown && ['REVIEW', 'DELIVERED'].includes(item.status)
+    ? await upsertClientWorkOrderMemory(item.id)
+    : { ok: true, skipped: true as const, reason: 'WORK_ORDER_NOT_READY_FOR_MEMORY' }
+  return NextResponse.json({ item, memory })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {

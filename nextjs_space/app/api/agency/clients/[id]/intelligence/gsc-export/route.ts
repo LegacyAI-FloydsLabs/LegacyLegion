@@ -18,8 +18,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const form = await req.formData()
     const file = form.get('file') as File | null
     if (!file) return NextResponse.json({ code: 'GSC_FILE_REQUIRED', error: 'CSV file is required.' }, { status: 400 })
-    const summary = await saveClientGscSummary(params.id, await file.text())
-    return NextResponse.json({ ok: true, summary })
+    const result = await saveClientGscSummary(params.id, await file.text())
+    return NextResponse.json({ ok: true, summary: result.summary, memory: result.memory })
   } catch (error) {
     return errorResponse(error)
   }

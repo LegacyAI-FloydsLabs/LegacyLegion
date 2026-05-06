@@ -15,8 +15,8 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   if (!(session?.user as any)?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const snapshot = await refreshClientGBP(params.id)
-    return NextResponse.json({ ok: true, snapshot })
+    const result = await refreshClientGBP(params.id)
+    return NextResponse.json({ ok: true, snapshot: result.snapshot, memory: result.memory })
   } catch (error) {
     return errorResponse(error)
   }
