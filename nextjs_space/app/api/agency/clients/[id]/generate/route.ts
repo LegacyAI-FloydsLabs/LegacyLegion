@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import { AGENCY_TOOLS, AgencyToolType, buildAgencyPrompt } from '@/lib/agency-prompts'
+import { upsertClientWorkOrderMemory } from '@/lib/agents/memory'
 
 const VALID_TYPES = new Set(AGENCY_TOOLS.map(t => t.type))
 
@@ -127,6 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             generatedAt: new Date(),
           },
         })
+        await upsertClientWorkOrderMemory(wo.id)
       } else {
         await prisma.clientWorkOrder.update({ where: { id: wo.id }, data: { status: 'DRAFT' } })
       }

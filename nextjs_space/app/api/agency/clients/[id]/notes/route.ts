@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { upsertClientNoteMemory } from '@/lib/agents/memory'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
@@ -21,5 +22,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
     include: { author: { select: { name: true, email: true } } },
   })
+  await upsertClientNoteMemory(note.id)
   return NextResponse.json({ note })
 }

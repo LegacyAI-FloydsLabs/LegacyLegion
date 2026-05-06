@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { fetchPublicGBP, type GBPSnapshot } from './gbp'
 import { summarizeGscCsv, type GscSummary } from './gsc'
+import { upsertClientIntelligenceMemory } from '@/lib/agents/memory'
 
 export class ClientIntelligenceError extends Error {
   constructor(public readonly code: string, message: string, public readonly status = 400) {
@@ -20,6 +21,7 @@ export async function refreshClientGBP(clientId: string) {
     create: { clientId: client.id, gbpSnapshotJson: snapshot as any, fetchedAt: new Date(snapshot.fetchedAt) },
     update: { gbpSnapshotJson: snapshot as any, fetchedAt: new Date(snapshot.fetchedAt) },
   })
+  await upsertClientIntelligenceMemory(client.id)
   return snapshot
 }
 
@@ -33,6 +35,7 @@ export async function saveClientGscSummary(clientId: string, csvText: string) {
     create: { clientId: client.id, gscSummaryJson: summary as any, fetchedAt: new Date() },
     update: { gscSummaryJson: summary as any, fetchedAt: new Date() },
   })
+  await upsertClientIntelligenceMemory(client.id)
   return summary
 }
 

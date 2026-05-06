@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import type { AgentToolName } from '@/lib/agents/registry'
 import { promoteProspectToLead, ProspectSearchError, searchProspects } from '@/lib/prospects/service'
+import { upsertClientWorkOrderMemory } from '@/lib/agents/memory'
 
 export type ToolName = AgentToolName
 
@@ -167,6 +168,9 @@ export async function dispatchTool(
       generatedAt: outputMarkdown ? new Date() : null,
     },
   })
+  if (outputMarkdown) {
+    await upsertClientWorkOrderMemory(workOrder.id)
+  }
 
   return {
     ok: Boolean(outputMarkdown),

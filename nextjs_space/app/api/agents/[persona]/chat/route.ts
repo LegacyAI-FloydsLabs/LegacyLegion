@@ -7,7 +7,7 @@ import { AGENCY_TOOLS, BRAND_RULES } from '@/lib/agency-prompts'
 import { prisma } from '@/lib/db'
 import { dispatchTool, type ToolName } from '@/lib/agents/dispatcher'
 import { getPersona, type AgentPersona } from '@/lib/agents/registry'
-import { recallMemory, recordTurn } from '@/lib/agents/memory'
+import { formatMemoryBlock, recallMemory, recordTurn } from '@/lib/agents/memory'
 
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
 
@@ -50,10 +50,6 @@ async function clientContext(clientId?: string): Promise<string> {
   return `<CLIENT_CONTEXT>\nClient: ${client.businessName} (${client.industry}, ${client.city ?? 'Indianapolis'} ${client.state ?? 'IN'})\nTier: ${client.tier} • MRR: $${client.monthlyMRR}\nStatus: ${client.status}\nStrategy brief: ${client.strategyBrief || 'none'}\n</CLIENT_CONTEXT>`
 }
 
-function memoryBlock(hits: { score: number; namespace: string; text: string }[]): string {
-  if (!hits.length) return '<MEMORY>\nNo prior context retrieved.\n</MEMORY>'
-  return `<MEMORY>\nRetrieved ${hits.length} prior context items.\n\n${hits.map((hit) => `[${hit.score.toFixed(2)}] (${hit.namespace}) ${hit.text}`).join('\n')}\n</MEMORY>`
-}
 
 export async function POST(req: NextRequest, { params }: { params: { persona: string } }) {
   const session = await getServerSession(authOptions)
@@ -90,7 +86,7 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
     persona.systemPrompt,
     `<BRAND_RULES>\n${BRAND_RULES}\n</BRAND_RULES>`,
     await clientContext(clientId),
-    memoryBlock(recalled),
+    formatMemoryBlock(recalled),
     toolsBlock(persona.allowedTools),
   ].filter(Boolean).join('\n\n')
 
