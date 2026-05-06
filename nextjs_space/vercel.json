@@ -3,6 +3,10 @@
     {
       "path": "/api/agency/intelligence/refresh-all",
       "schedule": "30 11,12 * * *"
+    },
+    {
+      "path": "/api/agency/digest/daily",
+      "schedule": "0 11,12 * * *"
     }
   ]
 }

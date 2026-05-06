@@ -13,7 +13,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, Globe, MapPin, Sparkles, Trash2, ExternalLink, Copy, CheckCircle2 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, Globe, MapPin, Sparkles, Trash2, ExternalLink, Copy, CheckCircle2, Download } from 'lucide-react'
 import { AgencyToolPanel } from './agency-tool-panel'
 import { WorkOrderViewer } from './work-order-viewer'
 
@@ -93,6 +94,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
   const [noteText, setNoteText] = useState('')
   const [busyNote, setBusyNote] = useState(false)
   const [busyIntelligence, setBusyIntelligence] = useState(false)
+  const [busyExport, setBusyExport] = useState<string | null>(null)
 
   const orders = optimisticOrders
   const inProgress = orders.filter(o => o.status === 'IN_PROGRESS' || o.status === 'REVIEW').length
@@ -162,6 +164,31 @@ export function ClientWorkspace({ client }: { client: Client }) {
     }
   }
 
+  async function exportSnapshot(format: 'md' | 'json' | 'pdf') {
+    setBusyExport(format)
+    try {
+      const res = await fetch(`/api/agency/clients/${client.id}/export?format=${format}`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const fallback = `${client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client'}-snapshot.${format}`
+      const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? fallback
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      toast.success(`Exported ${format.toUpperCase()} snapshot`)
+    } catch {
+      toast.error('Could not export client snapshot')
+    } finally {
+      setBusyExport(null)
+    }
+  }
+
   return (
     <Container size="xl">
       <div className="mb-3">
@@ -174,6 +201,16 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <>
             <Badge variant="outline" className={tierBadge(client.tier)}>{client.tier.replace('_',' ')}</Badge>
             <Badge variant="outline">${client.monthlyMRR}/mo</Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={Boolean(busyExport)}><Download className="mr-2 h-4 w-4" />{busyExport ? 'Exporting…' : 'Export'}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSnapshot('md')}>Markdown snapshot</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('json')}>JSON snapshot</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('pdf')}>PDF snapshot</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="sm" onClick={deleteClient}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
           </>
         }
