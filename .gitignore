@@ -16,3 +16,6 @@ tsconfig.tsbuildinfo
 .floyd/*.hostedapp-symlink
 .floyd/pgdata/
 .floyd/pglog
+nextjs_space/dogfood-output/
+nextjs_space/public-api-backups/
+nextjs_space/external/marketing-open-source/
