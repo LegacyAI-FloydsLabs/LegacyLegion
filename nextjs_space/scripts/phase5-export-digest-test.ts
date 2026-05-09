@@ -9,6 +9,7 @@ import {
   isIndianapolisDigestRunWindow,
 } from '@/lib/notifications/daily-digest'
 import {
+  buildClientSnapshotHtml,
   EXPORT_MARKDOWN_H2_ORDER,
   getClientSnapshot,
   normalizeExportForDiff,
@@ -194,11 +195,19 @@ async function testClientSnapshotExportContracts() {
   const jsonA = renderClientSnapshotJson(snapshot)
   const jsonB = renderClientSnapshotJson({ ...snapshot, generatedAt: new Date('2026-05-06T12:00:30.000Z').toISOString() })
   assert(normalizeExportForDiff(jsonA) === normalizeExportForDiff(jsonB), 'expected JSON export to be idempotent after timestamp normalization')
+  const html = buildClientSnapshotHtml(snapshot)
+  assert(html.includes('data-design-system="legacy-legion-enterprise"'), 'expected enterprise design system marker in PDF HTML source')
+  assert(html.includes('LegacyLegion Client Snapshot'), 'expected branded PDF HTML title')
+  assert(html.includes('Partner, not vendor'), 'expected PDF HTML to preserve brand voice')
 
   const pdf = await renderClientSnapshotPdf(snapshot)
+  const pdfText = pdf.body.toString('latin1')
   assert(pdf.contentType === 'application/pdf', `expected application/pdf, got ${pdf.contentType}`)
-  assert(pdf.body.length > 1024, `expected PDF body > 1KB, got ${pdf.body.length}`)
+  assert(pdf.body.length > 4096, `expected enterprise PDF body > 4KB, got ${pdf.body.length}`)
   assert(pdf.body.subarray(0, 4).toString('utf8') === '%PDF', 'expected PDF body to start with %PDF')
+  assert(pdf.source === 'local-html-to-pdf', `expected local HTML-to-PDF source, got ${pdf.source}`)
+  assert(pdfText.includes('/Title'), 'expected PDF metadata title')
+  assert(pdfText.includes('LegacyLegion Client Snapshot'), 'expected visible branded title in PDF content')
 }
 
 function testVercelAndUiContracts() {
