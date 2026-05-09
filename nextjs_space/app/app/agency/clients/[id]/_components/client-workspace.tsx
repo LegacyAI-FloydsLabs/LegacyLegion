@@ -211,7 +211,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
                 <DropdownMenuItem onClick={() => exportSnapshot('pdf')}>PDF snapshot</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="sm" onClick={deleteClient}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
+            <Button variant="ghost" size="sm" onClick={deleteClient} aria-label={`Delete ${client.businessName}`} title={`Delete ${client.businessName}`}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
           </>
         }
       />

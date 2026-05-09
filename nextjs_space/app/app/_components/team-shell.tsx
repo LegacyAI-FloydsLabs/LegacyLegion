@@ -139,7 +139,7 @@ export function TeamShell({
                 <div className="text-sm font-medium truncate">{user?.name || user?.email}</div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{user?.role}</div>
               </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => signOut({ callbackUrl: '/' })} title="Sign out">
+              <Button variant="ghost" size="icon-sm" onClick={async () => { await signOut({ redirect: false }); router.replace('/login') }} aria-label="Sign out" title="Sign out">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
