@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import {
   FileSearch, MapPin, Users, Megaphone, FileText, Mail, MessageSquare, Sparkles, Loader2, Globe, KeySquare,
 } from 'lucide-react'
+import { AGENCY_TOOLS } from '@/lib/agency-prompts'
 
 interface ToolDef {
   type: string
@@ -19,17 +20,40 @@ interface ToolDef {
   accent: string
 }
 
-const TOOLS: ToolDef[] = [
-  { type: 'SEO_AUDIT', label: 'SEO Audit', description: 'Full local SEO audit: technical, on-page, content, links, quick wins.', icon: FileSearch, accent: 'border-violet-500/40 from-violet-500/10' },
-  { type: 'GBP_OPTIMIZATION', label: 'GBP Optimization', description: 'Google Business Profile audit + 30/60/90 plan.', icon: MapPin, accent: 'border-fuchsia-500/40 from-fuchsia-500/10' },
-  { type: 'COMPETITOR_SWEEP', label: 'Competitor Sweep', description: 'Top local competitors + how to overtake them.', icon: Users, accent: 'border-rose-500/40 from-rose-500/10' },
-  { type: 'KEYWORD_RESEARCH', label: 'Keyword Research', description: 'High-intent local keyword universe + clustering.', icon: KeySquare, accent: 'border-amber-500/40 from-amber-500/10' },
-  { type: 'CONTENT_BRIEF', label: 'Content Brief', description: 'Outline + entities for a target page.', icon: FileText, needsInput: 'Topic or target keyword', accent: 'border-emerald-500/40 from-emerald-500/10' },
-  { type: 'AD_COPY', label: 'Ad Copy Pack', description: 'Google + Meta ad copy variants.', icon: Megaphone, needsInput: 'Offer / campaign focus', accent: 'border-blue-500/40 from-blue-500/10' },
-  { type: 'LOCAL_LANDING_PAGE', label: 'Local Landing Page', description: 'Draft a city/service landing page incl. JSON-LD.', icon: Globe, needsInput: 'Service + city', accent: 'border-cyan-500/40 from-cyan-500/10' },
-  { type: 'REVIEW_RESPONSE', label: 'Review Response', description: 'Draft a public reply to a customer review.', icon: MessageSquare, needsInput: 'Paste the review text', accent: 'border-purple-500/40 from-purple-500/10' },
-  { type: 'EMAIL_CAMPAIGN', label: 'Email Campaign', description: '5-touch nurture sequence.', icon: Mail, needsInput: 'Audience + goal', accent: 'border-orange-500/40 from-orange-500/10' },
-]
+const iconForTool = (type: string) => {
+  if (type.startsWith('OSS_')) return Sparkles
+  return {
+    SEO_AUDIT: FileSearch,
+    GBP_OPTIMIZATION: MapPin,
+    COMPETITOR_SWEEP: Users,
+    KEYWORD_RESEARCH: KeySquare,
+    CONTENT_BRIEF: FileText,
+    AD_COPY: Megaphone,
+    LOCAL_LANDING_PAGE: Globe,
+    REVIEW_RESPONSE: MessageSquare,
+    EMAIL_CAMPAIGN: Mail,
+  }[type] ?? Sparkles
+}
+
+const BUILT_IN_TOOL_ACCENTS: Record<string, string> = {
+  SEO_AUDIT: 'border-violet-500/40 from-violet-500/10',
+  GBP_OPTIMIZATION: 'border-fuchsia-500/40 from-fuchsia-500/10',
+  COMPETITOR_SWEEP: 'border-rose-500/40 from-rose-500/10',
+  KEYWORD_RESEARCH: 'border-amber-500/40 from-amber-500/10',
+  CONTENT_BRIEF: 'border-emerald-500/40 from-emerald-500/10',
+  AD_COPY: 'border-blue-500/40 from-blue-500/10',
+  LOCAL_LANDING_PAGE: 'border-cyan-500/40 from-cyan-500/10',
+  REVIEW_RESPONSE: 'border-purple-500/40 from-purple-500/10',
+  EMAIL_CAMPAIGN: 'border-orange-500/40 from-orange-500/10',
+}
+
+const TOOLS: ToolDef[] = AGENCY_TOOLS.map((tool) => ({
+  ...tool,
+  icon: iconForTool(tool.type),
+  accent: tool.type.startsWith('OSS_')
+    ? 'border-teal-500/40 from-teal-500/10'
+    : BUILT_IN_TOOL_ACCENTS[tool.type] ?? 'border-slate-500/40 from-slate-500/10',
+}))
 
 interface Props {
   client: { id: string; businessName: string; industry: string; city: string | null; state: string | null }
