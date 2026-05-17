@@ -13,6 +13,7 @@ build/
 tsconfig.tsbuildinfo
 **/.yarn/global/
 **/.yarn/install-state.gz
+.floyd/
 .floyd/*.hostedapp-symlink
 .floyd/pgdata/
 .floyd/pglog
