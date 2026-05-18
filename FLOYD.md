@@ -1,10 +1,10 @@
-# LegacyLegion-phase1 — FLOYD.md
+# LegacyLegion — FLOYD.md
 **Version:** 1.7.0
 **Initialized:** 2026-05-12T14:58:52-0400
 **Governance:** .supercache/ v1.7.0
 **Port:** 3106 (claimed in port-registry.json)
 **Drive:** SanDisk1Tb
-**Path:** /Volumes/SanDisk1Tb/LegacyLegion-phase1
+**Path:** /Volumes/SanDisk1Tb/LegacyLegion
 
 > **Compliance Notice:** This file must match the template at
 > `.supercache/templates/floyd-md-template.md`. If you are an agent reading
@@ -16,7 +16,7 @@
 
 ## Agent Contract
 
-You are working on **LegacyLegion-phase1**, a Legacy AI project.
+You are working on **LegacyLegion**, a Legacy AI project.
 
 **This file (`FLOYD.md`) is the canonical project spec.** It is authoritative for project identity, stack, ports, build commands, environment variables, and project-specific rules. All agents — Floyd, Claude, or any model routed through the OhMyFloyd harness — read this file first.
 
@@ -68,7 +68,7 @@ It is **READ-ONLY**. Do not create, modify, or delete any file there.
 
 | Field                | Value                                                                   |
 |----------------------|-------------------------------------------------------------------------|
-| **Name**             | LegacyLegion-phase1                                                     |
+| **Name**             | LegacyLegion                                                            |
 | **Purpose**          | AI-led marketing operations platform for Legacy AI agency workflows: agents plan/execute/verifiably route marketing work while humans handle credentials, approvals, and relationship/field actions. |
 | **Primary Language** | TypeScript (Next.js application in `nextjs_space/`)                     |
 | **Runtime**          | Node.js with Yarn 4.10.3 via Corepack                                  |
@@ -77,14 +77,14 @@ It is **READ-ONLY**. Do not create, modify, or delete any file there.
 | **Database**         | PostgreSQL via Prisma 6.7.0                                             |
 | **Port**             | **3106** — claimed in `/Volumes/SanDisk1Tb/SSOT/port-registry.json`    |
 | **Repository**       | `https://github.com/LegacyAI-FloydsLabs/LegacyLegion.git`              |
-| **Current Phase**    | Active phase-1 worktree on `floyd/phase-1-routellm-agents`             |
+| **Current Phase**    | Phase 1 merged to `main`; canonical active checkout is `/Volumes/SanDisk1Tb/LegacyLegion` |
 
 ---
 
 ## Project Structure
 
 ```
-LegacyLegion-phase1/
+LegacyLegion/
 ├── nextjs_space/                 # Runnable Next.js 14 application root
 │   ├── app/                      # App Router pages and API routes
 │   ├── components/               # Shared React UI components
@@ -94,7 +94,7 @@ LegacyLegion-phase1/
 │   ├── docs/                     # App-specific release and review documentation
 │   ├── package.json              # Yarn scripts and dependency manifest
 │   └── yarn.lock                 # Committed Yarn lockfile
-├── plans/                        # Multi-PR construction blueprints
+├── .vercelignore                 # Vercel upload exclusion rules
 ├── SSOT/                         # Project status, decisions, architecture facts, verification records
 ├── Issues/                       # Project issue ledger
 ├── .floyd/                       # Agent working state; gitignored
@@ -160,7 +160,7 @@ cd nextjs_space && yarn install --immutable && yarn lint && yarn tsc --noEmit --
 
 | Pattern | Trigger | Fix | Confidence |
 |---------|---------|-----|------------|
-| canonical-worktree-first | New work starts while `LegacyLegion`, `LegacyLegion-phase1`, and `LegacyLegionLocal` all exist | Treat `LegacyLegion-phase1` as the active phase branch worktree until merged; treat `LegacyLegionLocal` as reference-only handoff material. | 1.0 |
+| canonical-worktree-first | New work starts after Phase 1 merge | Treat `/Volumes/SanDisk1Tb/LegacyLegion` on `main` as the canonical active checkout; archived/reference material stays in `.floyd/quarantine/` unless explicitly reviewed and sanitized. | 1.0 |
 | connector-not-configured | External API key/env var is absent | Return explicit not-configured/error state; do not mock or invent marketing data. | 1.0 |
 | approval-before-external-write | Agent proposes outreach, publishing, client-visible delivery, account change, or spend-bearing action | Create/reuse approval state before executing; record approval evidence. | 1.0 |
 

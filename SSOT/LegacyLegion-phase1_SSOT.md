@@ -46,17 +46,17 @@ This pattern is deliberate — it reinforces evidence-first thinking and makes t
 
 ## Current State
 
-**Phase:** Phase 1 consolidation / pre-release hardening
-**Status:** Active
-**Last Agent Session:** 2026-05-18 00:49 EDT
+**Phase:** Phase 1 merged / canonical checkout cutover
+**Status:** Active on `main`
+**Last Agent Session:** 2026-05-18 01:50 EDT
 
 ---
 
 ## Architecture Facts
 
-- Active implementation root is `/Volumes/SanDisk1Tb/LegacyLegion-phase1`.
+- Active implementation root is `/Volumes/SanDisk1Tb/LegacyLegion`.
 - Runnable app root is `nextjs_space/`.
-- `/Volumes/SanDisk1Tb/LegacyLegion-phase1` is a git worktree on branch `floyd/phase-1-routellm-agents`; `/Volumes/SanDisk1Tb/LegacyLegion` is the sibling `main` worktree.
+- `/Volumes/SanDisk1Tb/LegacyLegion` is the canonical `main` worktree; `/Volumes/SanDisk1Tb/LegacyLegion-phase1` has been removed with `git worktree remove`.
 - The repository remote is `https://github.com/LegacyAI-FloydsLabs/LegacyLegion.git`; GitHub default branch is `main`.
 - Local review port is `3106`, claimed in `/Volumes/SanDisk1Tb/SSOT/port-registry.json`.
 - `/Volumes/SanDisk1Tb/LegacyLegionLocal` was reference-only handoff material and is now quarantined outside normal agent paths at `/Volumes/SanDisk1Tb/LegacyLegion/.floyd/quarantine/2026-05-18/LegacyLegionLocal`.
@@ -71,7 +71,7 @@ This pattern is deliberate — it reinforces evidence-first thinking and makes t
 
 ### Key architectural choices
 
-- Treat `floyd/phase-1-routellm-agents` as the active implementation branch until it is merged or explicitly superseded.
+- Treat `/Volumes/SanDisk1Tb/LegacyLegion` on `main` as the active implementation checkout.
 - Keep human approval as a hard boundary for credential use, external writes, publishing, outreach, client-visible delivery, and spend-bearing actions.
 - Missing connector credentials produce structured not-configured states; mock marketing/prospect/intelligence data is not acceptable.
 
@@ -83,6 +83,7 @@ This pattern is deliberate — it reinforces evidence-first thinking and makes t
 |---|---|---|---|
 | 2026-05-17 | Canonicalize active work around `LegacyLegion-phase1` worktree until branch integration | Verified branch/worktree evidence shows phase implementation lives on `floyd/phase-1-routellm-agents`, while `LegacyLegionLocal` is reference-only handoff material. | Agent / Douglas direction |
 | 2026-05-17 | Claim port 3106 for local LegacyLegion phase review | Existing local QA references used 3106 and the port was unclaimed/free; forbidden default Next.js ports must be avoided. | Agent |
+| 2026-05-18 | Cut over canonical active source to `/Volumes/SanDisk1Tb/LegacyLegion` on `main` | PR #1 merged cleanly and the phase worktree was removed through git worktree management after canonical checkout sync. | Agent / Douglas approval |
 
 <!-- Decisions are append-only. When a decision is superseded, add a new row with the -->
 <!-- superseding decision and link back to the old one. Never edit historical rows. -->
@@ -142,6 +143,7 @@ Every sweep of this SSOT must append one or more entries here. Never edit or rem
 | 2026-05-18 01:46 EDT | Deployment | Vercel project `legacylegion` is configured with root directory `nextjs_space`, all restored env keys are configured encrypted for production/preview/development, and production deployment is Ready | `vercel project inspect legacylegion`; Vercel env API upsert reported 13 updated, 0 failed; `vercel inspect legacylegion-lc6lgnruc-legacy-floydslabs.vercel.app`; `vercel curl / --deployment ... -- --head` returned HTTP 200 | 100% |
 | 2026-05-18 01:46 EDT | Reference Audit | Downloaded original reference zip is reference-only and contains 55 sensitive/private candidate text files; none were promoted into the project | `/Users/douglastalley/Downloads/LegacyAI_Marketing_Strategy.zip` zip scan over text-like files | 100% |
 | 2026-05-18 01:48 EDT | Verification | Final local pre-merge verification passed after Vercel ignore/governance updates | `yarn install --immutable && yarn lint && yarn tsc --noEmit --pretty false && yarn test && yarn build` exit 0 | 100% |
+| 2026-05-18 01:50 EDT | Architecture Facts | Canonical checkout is `/Volumes/SanDisk1Tb/LegacyLegion` on `main` at merge commit `f6e3ec3345a423d24cf9e649ddf1734ed441c9e2`; phase worktree was removed | `git pull --ff-only origin main`; `git worktree remove /Volumes/SanDisk1Tb/LegacyLegion-phase1`; `git worktree list --porcelain`; `read LegacyLegion-phase1` returned not found | 100% |
 
 ---
 
@@ -155,6 +157,7 @@ Every sweep of this SSOT must append one or more entries here. Never edit or rem
 - 2026-05-18 00:58 EDT — Quarantined `LegacyLegionLocal` reference-only material under the canonical checkout `.floyd/quarantine` directory and recorded the new path.
 - 2026-05-18 01:46 EDT — Verified approved Phase 4 memory path, Vercel encrypted environment configuration, production deployment readiness, and original reference package audit.
 - 2026-05-18 01:48 EDT — Re-ran final local verification after Vercel ignore and governance evidence updates.
+- 2026-05-18 01:50 EDT — Cut canonical active source over to `/Volumes/SanDisk1Tb/LegacyLegion` on `main` and removed the phase worktree.
 
 <!-- Append new entries BELOW this comment line, in chronological order. -->
 <!-- Never edit or remove existing entries — this is the authoritative change history. -->
