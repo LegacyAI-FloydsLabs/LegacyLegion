@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
+import { authOptions } from '@/lib/auth'
 import { ClientWorkspace } from './_components/client-workspace'
 
 export const dynamic = 'force-dynamic'
@@ -12,9 +14,23 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
       clientNotes: { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true, email: true } } } },
       prospects: { orderBy: { createdAt: 'desc' } },
       intelligence: true,
+      accessRequests: {
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          requester: { select: { name: true, email: true } },
+          approver: { select: { name: true, email: true } },
+          events: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            include: { actor: { select: { name: true, email: true } } },
+          },
+        },
+      },
     },
   })
   if (!client) notFound()
+
+  const session = await getServerSession(authOptions)
 
   return (
     <ClientWorkspace
@@ -45,7 +61,21 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
           gscSummaryJson: client.intelligence.gscSummaryJson,
           fetchedAt: client.intelligence.fetchedAt.toISOString(),
         } : null,
+        accessRequests: client.accessRequests.map((request: any) => ({
+          ...request,
+          requestedAt: request.requestedAt.toISOString(),
+          receivedAt: request.receivedAt?.toISOString() ?? null,
+          approvedAt: request.approvedAt?.toISOString() ?? null,
+          revokedAt: request.revokedAt?.toISOString() ?? null,
+          createdAt: request.createdAt.toISOString(),
+          updatedAt: request.updatedAt.toISOString(),
+          events: request.events.map((event: any) => ({
+            ...event,
+            createdAt: event.createdAt.toISOString(),
+          })),
+        })),
       }}
+      currentUserRole={session?.user?.role ?? null}
     />
   )
 }

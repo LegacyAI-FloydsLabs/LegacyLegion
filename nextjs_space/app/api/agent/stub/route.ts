@@ -1,6 +1,11 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
+
+
+const AGENT_STUB_WINDOW_MS = 60 * 60 * 1000
+const TEAM_ONLY_DOGFOOD_MODE = true
 
 // Stubbed agent that mimics a streaming OpenAI-style chat completion.
 // Will be replaced by AGENT_API_URL once the real cloud agent is online.
@@ -23,13 +28,21 @@ When talking to a prospect:
 - Never invent pricing outside the three tiers above.`
 
 export async function POST(req: NextRequest) {
+  if (TEAM_ONLY_DOGFOOD_MODE) {
+    return new Response('Not found', { status: 404 })
+  }
+
+  const body = await req.json().catch(() => ({}))
+  const context = body?.context ?? {}
+  const sessionIdentifier = typeof context?.sessionId === 'string' ? context.sessionId : null
+  const limit = checkRateLimit(req, { bucket: 'agent-stub', limit: 120, windowMs: AGENT_STUB_WINDOW_MS, identifier: sessionIdentifier })
+  if (!limit.allowed) return rateLimited(limit)
+
   const apiKey = process.env.ABACUSAI_API_KEY
   if (!apiKey) {
     return new Response('Agent unavailable: missing API key', { status: 503 })
   }
-  const body = await req.json().catch(() => ({}))
   const incoming = Array.isArray(body?.messages) ? body.messages : []
-  const context = body?.context ?? {}
   const stream = body?.stream !== false
 
   const messages = [

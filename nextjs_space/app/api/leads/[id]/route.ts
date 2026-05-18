@@ -1,14 +1,13 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAdminUser, requireInternalUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 import { tierMRR } from '@/lib/scoring'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
   const lead = await prisma.lead.findUnique({
     where: { id: params.id },
     include: {
@@ -23,9 +22,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const userId = (session.user as any).id as string
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
+  const userId = auth.userId
   const body = await req.json().catch(() => ({}))
   const allowed: Record<string, any> = {}
   const fields = [
@@ -72,9 +71,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((session.user as any).role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const auth = await requireAdminUser()
+  if ('response' in auth) return auth.response
   await prisma.lead.delete({ where: { id: params.id } })
   return NextResponse.json({ ok: true })
 }

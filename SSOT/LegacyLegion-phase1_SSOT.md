@@ -144,6 +144,10 @@ Every sweep of this SSOT must append one or more entries here. Never edit or rem
 | 2026-05-18 01:46 EDT | Reference Audit | Downloaded original reference zip is reference-only and contains 55 sensitive/private candidate text files; none were promoted into the project | `/Users/douglastalley/Downloads/LegacyAI_Marketing_Strategy.zip` zip scan over text-like files | 100% |
 | 2026-05-18 01:48 EDT | Verification | Final local pre-merge verification passed after Vercel ignore/governance updates | `yarn install --immutable && yarn lint && yarn tsc --noEmit --pretty false && yarn test && yarn build` exit 0 | 100% |
 | 2026-05-18 01:50 EDT | Architecture Facts | Canonical checkout is `/Volumes/SanDisk1Tb/LegacyLegion` on `main` at merge commit `f6e3ec3345a423d24cf9e649ddf1734ed441c9e2`; phase worktree was removed | `git pull --ff-only origin main`; `git worktree remove /Volumes/SanDisk1Tb/LegacyLegion-phase1`; `git worktree list --porcelain`; `read LegacyLegion-phase1` returned not found | 100% |
+| 2026-05-18 03:33 EDT | Verification | Security hardening added explicit API allowlists, internal/admin/partner route guards, lead assessment tokens, public rate limits, and env-only operator bootstrap | `nextjs_space/middleware.ts`; `nextjs_space/lib/authz.ts`; `nextjs_space/lib/public-assessment-token.ts`; `nextjs_space/lib/rate-limit.ts`; `nextjs_space/scripts/security-hardening-test.ts`; `yarn install --immutable && yarn lint && yarn tsc --noEmit --pretty false && yarn test && yarn build` exit 0 | 100% |
+| 2026-05-18 03:36 EDT | Verification | Prisma migrations directory now contains an initial PostgreSQL migration and database backup/restore scripts are available through package scripts | `nextjs_space/prisma/migrations/20260518033300_init/migration.sql`; `nextjs_space/prisma/migrations/migration_lock.toml`; `nextjs_space/scripts/postgres-backup.ts`; `yarn tsx scripts/postgres-backup.ts --help` exit 0; full verification exit 0 | 100% |
+| 2026-05-18 03:58 EDT | Verification | Secure client access intake now stores only external vault/admin-invite references, records auditable access events, and gates approve/reject/revoke decisions to admins | `nextjs_space/prisma/schema.prisma`; `nextjs_space/prisma/migrations/20260518042000_client_access_intake/migration.sql`; `nextjs_space/app/api/agency/clients/[id]/access-requests/route.ts`; `nextjs_space/app/api/agency/clients/[id]/access-requests/[requestId]/route.ts`; `nextjs_space/app/app/agency/clients/[id]/_components/client-access-panel.tsx`; `yarn tsx scripts/client-access-test.ts` exit 0; `yarn install --immutable && yarn lint && yarn tsc --noEmit --pretty false && yarn test && yarn build` exit 0 | 100% |
+| 2026-05-18 07:18 EDT | Verification | Team-only dogfood mode hides public signup, partner signup/login, client intake, and widget/chat self-service surfaces while preserving future reactivation code paths | `nextjs_space/middleware.ts`; `nextjs_space/app/login/page.tsx`; `nextjs_space/app/app/_components/team-shell.tsx`; `nextjs_space/app/app/referrals/_components/referrals-client.tsx`; `nextjs_space/app/app/agent/_components/agent-settings.tsx`; `nextjs_space/scripts/security-hardening-test.ts`; `yarn install --immutable && yarn lint && yarn tsc --noEmit --pretty false && yarn test && yarn build` exit 0 | 100% |
 
 ---
 
@@ -158,9 +162,13 @@ Every sweep of this SSOT must append one or more entries here. Never edit or rem
 - 2026-05-18 01:46 EDT — Verified approved Phase 4 memory path, Vercel encrypted environment configuration, production deployment readiness, and original reference package audit.
 - 2026-05-18 01:48 EDT — Re-ran final local verification after Vercel ignore and governance evidence updates.
 - 2026-05-18 01:50 EDT — Cut canonical active source over to `/Volumes/SanDisk1Tb/LegacyLegion` on `main` and removed the phase worktree.
+- 2026-05-18 03:33 EDT — Hardened auth/RBAC and public costly routes, replaced unsafe seed path with env-only operator bootstrap, and verified full local build sequence.
+- 2026-05-18 03:36 EDT — Added initial Prisma migration SQL, migration lock, and PostgreSQL backup/restore scripts; re-ran full local verification.
 
 <!-- Append new entries BELOW this comment line, in chronological order. -->
 <!-- Never edit or remove existing entries — this is the authoritative change history. -->
+- 2026-05-18 03:58 EDT — Added secure client access-intake ledger with external-reference-only storage, admin approval controls, and audit events; verified focused contract test and full local build sequence.
+- 2026-05-18 07:18 EDT — Enabled team-only dogfood mode for Douglas/Ryan operations, hiding self-service entry points and verifying focused contracts plus full local build sequence.
 
 ---
 

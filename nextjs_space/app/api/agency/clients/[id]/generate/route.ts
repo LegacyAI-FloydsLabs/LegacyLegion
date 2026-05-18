@@ -1,8 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireInternalUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import { AGENCY_TOOLS, AgencyToolType, buildAgencyPrompt } from '@/lib/agency-prompts'
@@ -11,9 +10,9 @@ import { upsertClientWorkOrderMemory } from '@/lib/agents/memory'
 const VALID_TYPES = new Set(AGENCY_TOOLS.map(t => t.type))
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  const userId = (session?.user as any)?.id
-  if (!userId) return new Response('Unauthorized', { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
+  const userId = auth.userId
 
   const apiKey = process.env.ABACUSAI_API_KEY
   if (!apiKey) return new Response('Service unavailable', { status: 503 })

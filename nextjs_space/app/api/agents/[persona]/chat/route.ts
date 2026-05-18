@@ -1,8 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireInternalUser } from '@/lib/authz'
 import { AGENCY_TOOLS, BRAND_RULES } from '@/lib/agency-prompts'
 import { prisma } from '@/lib/db'
 import { dispatchTool, type ToolName } from '@/lib/agents/dispatcher'
@@ -52,9 +51,9 @@ async function clientContext(clientId?: string): Promise<string> {
 
 
 export async function POST(req: NextRequest, { params }: { params: { persona: string } }) {
-  const session = await getServerSession(authOptions)
-  const userId = (session?.user as any)?.id
-  if (!userId) return new Response('Unauthorized', { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
+  const userId = auth.userId
 
   const persona = getPersona(params.persona)
   if (!persona) return new Response('Unknown persona', { status: 404 })

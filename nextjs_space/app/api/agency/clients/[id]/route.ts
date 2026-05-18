@@ -1,13 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAdminUser, requireInternalUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
   const client = await prisma.client.findUnique({
     where: { id: params.id },
     include: {
@@ -20,8 +19,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
   const body = await req.json().catch(() => ({}))
   const allowed: any = {}
   for (const k of ['businessName','ownerName','email','phone','industry','city','state','website','gbpUrl','facebookUrl','linkedinUrl','tier','status','strategyBrief']) {
@@ -36,8 +35,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireAdminUser()
+  if ('response' in auth) return auth.response
   await prisma.client.delete({ where: { id: params.id } })
   return NextResponse.json({ ok: true })
 }

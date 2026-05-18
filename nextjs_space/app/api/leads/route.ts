@@ -1,13 +1,22 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireInternalUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 import { scoreLead, suggestTier, tierMRR } from '@/lib/scoring'
+import { createLeadAssessmentToken } from '@/lib/public-assessment-token'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
 
+
+const LEAD_SUBMISSION_WINDOW_MS = 60 * 60 * 1000
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireInternalUser()
+    if ('response' in auth) return auth.response
+
+    const limit = checkRateLimit(req, { bucket: 'lead-submission', limit: 20, windowMs: LEAD_SUBMISSION_WINDOW_MS })
+    if (!limit.allowed) return rateLimited(limit)
+
     const body = await req.json().catch(() => ({}))
     const businessName = String(body?.businessName ?? '').trim()
     const ownerName = String(body?.ownerName ?? '').trim()
@@ -73,7 +82,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({
-      ok: true, leadId: lead.id, score: lead.score, qualification: breakdown.qualification,
+      ok: true, leadId: lead.id, assessmentToken: createLeadAssessmentToken(lead.id),
+      score: lead.score, qualification: breakdown.qualification,
       proposedTier, estimatedMRR,
     })
   } catch (e: any) {
@@ -83,8 +93,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
 
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status') || undefined

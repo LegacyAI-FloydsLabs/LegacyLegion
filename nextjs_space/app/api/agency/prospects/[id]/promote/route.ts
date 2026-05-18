@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireInternalUser } from '@/lib/authz'
 import { promoteProspectToLead, ProspectSearchError } from '@/lib/prospects/service'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-  const userId = (session?.user as any)?.id
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
+  const userId = auth.userId
 
   try {
     const result = await promoteProspectToLead({ userId, prospectId: params.id })

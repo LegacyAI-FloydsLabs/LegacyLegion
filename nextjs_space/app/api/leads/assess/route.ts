@@ -1,16 +1,31 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { isInternalSession } from '@/lib/authz'
 import { prisma } from '@/lib/db'
+import { verifyLeadAssessmentToken } from '@/lib/public-assessment-token'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 
+const ASSESSMENT_WINDOW_MS = 15 * 60 * 1000
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ABACUSAI_API_KEY
-  if (!apiKey) return new Response('Service unavailable', { status: 503 })
-
   const body = await req.json().catch(() => ({}))
   const leadId = String(body?.leadId ?? '').trim()
   if (!leadId) return new Response('leadId required', { status: 400 })
+
+  const session = await getServerSession(authOptions)
+  if (!isInternalSession(session)) {
+    const limit = checkRateLimit(req, { bucket: 'lead-assessment', limit: 10, windowMs: ASSESSMENT_WINDOW_MS })
+    if (!limit.allowed) return rateLimited(limit)
+
+    const assessmentToken = String(body?.assessmentToken ?? '').trim()
+    if (!verifyLeadAssessmentToken(assessmentToken, leadId)) return new Response('Unauthorized', { status: 401 })
+  }
+
+  const apiKey = process.env.ABACUSAI_API_KEY
+  if (!apiKey) return new Response('Service unavailable', { status: 503 })
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId } })
   if (!lead) return new Response('Lead not found', { status: 404 })

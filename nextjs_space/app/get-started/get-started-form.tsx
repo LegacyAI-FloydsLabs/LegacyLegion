@@ -77,7 +77,7 @@ export function GetStartedForm() {
       setSubmitted(true)
       toast.success('Submitted — generating your AI assessment…')
       // Stream the AI assessment
-      streamAssessment(data?.leadId)
+      streamAssessment(data?.leadId, data?.assessmentToken)
     } catch (err: any) {
       setErrors({ form: 'Submission failed' })
       toast.error('Submission failed')
@@ -85,13 +85,13 @@ export function GetStartedForm() {
     }
   }
 
-  async function streamAssessment(leadId: string | undefined) {
-    if (!leadId) { setLoading(false); return }
+  async function streamAssessment(leadId: string | undefined, assessmentToken: string | undefined) {
+    if (!leadId || !assessmentToken) { setLoading(false); return }
     try {
       const res = await fetch('/api/leads/assess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId }),
+        body: JSON.stringify({ leadId, assessmentToken }),
       })
       if (!res.ok || !res.body) { setLoading(false); return }
       const reader = res.body.getReader()

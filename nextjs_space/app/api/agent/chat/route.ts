@@ -2,6 +2,11 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
+
+
+const PUBLIC_CHAT_WINDOW_MS = 60 * 60 * 1000
+const TEAM_ONLY_DOGFOOD_MODE = true
 
 // Bridge: forwards chat to the configured AGENT_API_URL.
 // Falls back to the local stub if not configured.
@@ -17,6 +22,13 @@ function resolveAgentUrl(req: NextRequest): string {
 }
 
 export async function POST(req: NextRequest) {
+  if (TEAM_ONLY_DOGFOOD_MODE) {
+    return new Response('Not found', { status: 404 })
+  }
+
+  const limit = checkRateLimit(req, { bucket: 'public-chat', limit: 60, windowMs: PUBLIC_CHAT_WINDOW_MS })
+  if (!limit.allowed) return rateLimited(limit)
+
   const body = await req.json().catch(() => ({}))
   const sessionId = String(body?.sessionId ?? '').trim() || null
   const visitorId = String(body?.visitorId ?? '').trim() || `anon_${Math.random().toString(36).slice(2, 10)}`

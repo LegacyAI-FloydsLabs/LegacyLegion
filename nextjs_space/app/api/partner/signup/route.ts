@@ -3,7 +3,12 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
 
+
+const PARTNER_SIGNUP_WINDOW_MS = 60 * 60 * 1000
+
+const TEAM_ONLY_DOGFOOD_MODE = true
 function generatePartnerCode(): string {
   const ts = Date.now().toString(36).toUpperCase().slice(-4)
   const rnd = Math.random().toString(36).toUpperCase().slice(2, 6)
@@ -11,7 +16,14 @@ function generatePartnerCode(): string {
 }
 
 export async function POST(req: NextRequest) {
+  if (TEAM_ONLY_DOGFOOD_MODE) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   try {
+    const limit = checkRateLimit(req, { bucket: 'partner-signup', limit: 10, windowMs: PARTNER_SIGNUP_WINDOW_MS })
+    if (!limit.allowed) return rateLimited(limit)
+
     const body = await req.json().catch(() => ({}))
     const email = String(body?.email ?? '').toLowerCase().trim()
     const password = String(body?.password ?? '')

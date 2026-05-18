@@ -225,7 +225,7 @@ export function DashboardClient({
                   </tr>
                 ))}
                 {recent.length === 0 && (
-                  <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No leads yet — add one or share /get-started.</td></tr>
+                  <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">No leads yet — add one from the team workspace.</td></tr>
                 )}
               </tbody>
             </table>

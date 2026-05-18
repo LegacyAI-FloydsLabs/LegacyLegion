@@ -6,24 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Bot, Code2, Copy, CheckCircle2, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 
+
+const TEAM_ONLY_DOGFOOD_MODE = true
+
 export function AgentSettings({ configured, agentUrl }: { configured: boolean; agentUrl: string }) {
-  const [copied, setCopied] = useState(false)
-  const [origin, setOrigin] = useState('')
-
-  useEffect(() => {
-    setOrigin(window.location.origin)
-  }, [])
-
-  const embedSnippet = `<!-- LegacyLegion Chat Widget -->
-<script src="${origin}/widget/loader.js" async></script>`
-
-  function copy() {
-    navigator.clipboard.writeText(embedSnippet)
-    setCopied(true)
-    toast.success('Snippet copied')
-    setTimeout(() => setCopied(false), 1500)
-  }
-
   return (
     <div className="space-y-5">
       <Card><CardContent className="p-5">
@@ -42,17 +28,51 @@ export function AgentSettings({ configured, agentUrl }: { configured: boolean; a
         </div>
       </CardContent></Card>
 
-      <Card><CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Code2 className="h-4 w-4" /> Embeddable Widget</h3>
-            <p className="text-sm text-muted-foreground">Drop this snippet on any client website to launch the LegacyLegion chat agent.</p>
-          </div>
-          <Button size="sm" variant="outline" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> {copied ? 'Copied' : 'Copy'}</Button>
-        </div>
-        <pre className="mt-4 rounded-md bg-muted/40 p-4 text-xs overflow-x-auto font-mono">{embedSnippet}</pre>
-        <a href="/widget" target="_blank" className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="h-3 w-3" /> Preview the widget</a>
-      </CardContent></Card>
+      {TEAM_ONLY_DOGFOOD_MODE ? <PausedWidgetCard /> : <EmbeddableWidgetCard />}
     </div>
+  )
+}
+
+function PausedWidgetCard() {
+  return (
+    <Card><CardContent className="p-5">
+      <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Code2 className="h-4 w-4" /> Embeddable Widget Paused</h3>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Public client self-service is hidden during the first 90 days of internal dogfooding. Keep client website embeds disabled until Douglas explicitly reopens this surface.
+      </p>
+    </CardContent></Card>
+  )
+}
+
+function EmbeddableWidgetCard() {
+  const [copied, setCopied] = useState(false)
+  const [origin, setOrigin] = useState('')
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
+  const embedSnippet = `<!-- LegacyLegion Chat Widget -->
+<script src="${origin}/widget/loader.js" async></script>`
+
+  function copy() {
+    navigator.clipboard.writeText(embedSnippet)
+    setCopied(true)
+    toast.success('Snippet copied')
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <Card><CardContent className="p-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-lg font-semibold flex items-center gap-2"><Code2 className="h-4 w-4" /> Embeddable Widget</h3>
+          <p className="text-sm text-muted-foreground">Drop this snippet on any client website to launch the LegacyLegion chat agent.</p>
+        </div>
+        <Button size="sm" variant="outline" onClick={copy}><Copy className="h-3.5 w-3.5 mr-1" /> {copied ? 'Copied' : 'Copy'}</Button>
+      </div>
+      <pre className="mt-4 rounded-md bg-muted/40 p-4 text-xs overflow-x-auto font-mono">{embedSnippet}</pre>
+      <a href="/widget" target="_blank" className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"><ExternalLink className="h-3 w-3" /> Preview the widget</a>
+    </CardContent></Card>
   )
 }

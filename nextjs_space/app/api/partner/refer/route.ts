@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { requirePartnerUser } from '@/lib/authz';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const partner = await prisma.referralPartner.findUnique({ where: { userId: session.user.id } });
+  const auth = await requirePartnerUser();
+  if ('response' in auth) return auth.response;
+  const partner = await prisma.referralPartner.findUnique({ where: { userId: auth.userId } });
   if (!partner) return NextResponse.json({ error: 'Not a partner' }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const clientEmail = (body?.clientEmail ?? '').toString().trim().toLowerCase();

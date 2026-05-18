@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { requireAdminUser } from '@/lib/authz';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireAdminUser();
+  if ('response' in auth) return auth.response;
   const partners = await prisma.referralPartner.findMany({ include: { submissions: true } });
   const out = partners.map((p: any) => ({
     id: p.id,

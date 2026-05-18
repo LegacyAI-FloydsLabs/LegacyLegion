@@ -14,13 +14,8 @@ export default function LoginPage() {
       <div className="flex-1">
         <AuthLayout title="Team Sign In" description="Sign in to the LegacyLegion command center">
           <LoginForm />
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            New to the team?{' '}
-            <Link href="/signup" className="text-primary hover:underline">Create an account</Link>
-          </div>
-          <div className="mt-2 text-center text-xs text-muted-foreground">
-            Are you a referral partner?{' '}
-            <Link href="/partner/login" className="text-primary hover:underline">Partner login</Link>
+          <div className="mt-6 rounded-lg border border-border bg-card/50 p-3 text-center text-sm text-muted-foreground">
+            Team-only dogfood mode is active. Douglas controls account access; public signup, partner login, and client self-service entry points are hidden.
           </div>
         </AuthLayout>
       </div>

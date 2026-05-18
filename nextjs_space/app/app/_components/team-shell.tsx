@@ -170,8 +170,8 @@ export function TeamShell({
             )}
           </div>
           {mode === 'sales' ? (
-            <Link href="/get-started" target="_blank">
-              <Button size="sm" variant="outline">View Public Form</Button>
+            <Link href="/app/leads/new">
+              <Button size="sm" variant="outline">+ New Lead</Button>
             </Link>
           ) : (
             <Link href="/app/agency/clients/new">

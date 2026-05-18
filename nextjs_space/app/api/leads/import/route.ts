@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { requireInternalUser } from '@/lib/authz';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -29,8 +28,8 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const auth = await requireInternalUser();
+  if ('response' in auth) return auth.response;
   try {
     const fd = await req.formData();
     const file = fd.get('file') as File | null;
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
             status: 'NEW',
             score: 50,
             qualification: 'MQL',
-            assignedToId: session.user.id,
+            assignedToId: auth.userId,
           },
         });
         created++;

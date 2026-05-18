@@ -1,13 +1,12 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireInternalUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 
 export async function POST(_req: NextRequest, { params }: { params: { leadId: string } }) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const auth = await requireInternalUser()
+  if ('response' in auth) return auth.response
   const lead = await prisma.lead.findUnique({ where: { id: params.leadId } })
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 

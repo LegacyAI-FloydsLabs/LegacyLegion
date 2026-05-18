@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { isInternalSession } from '@/lib/authz'
 import { refreshAllActiveClientGBP } from '@/lib/intelligence/service'
 
 export const dynamic = 'force-dynamic'
@@ -11,9 +12,9 @@ function hasCronSecret(req: NextRequest) {
   return req.headers.get('authorization') === `Bearer ${secret}`
 }
 
-async function hasUserSession() {
+async function hasInternalSession() {
   const session = await getServerSession(authOptions)
-  return Boolean((session?.user as any)?.id)
+  return isInternalSession(session)
 }
 
 function isIndianapolisRunWindow(now = new Date()) {
@@ -34,7 +35,7 @@ async function runRefresh() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasCronSecret(req) && !(await hasUserSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasCronSecret(req) && !(await hasInternalSession())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   return runRefresh()
 }
 

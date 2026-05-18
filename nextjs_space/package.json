@@ -4,13 +4,17 @@
   "packageManager": "yarn@4.10.3",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx scripts/export-html-contract-test.ts && tsx scripts/open-source-marketing-tool-catalog-test.ts"
+    "test": "tsx scripts/export-html-contract-test.ts && tsx scripts/open-source-marketing-tool-catalog-test.ts && tsx scripts/security-hardening-test.ts && tsx scripts/client-access-test.ts",
+    "bootstrap:operators": "tsx --require dotenv/config scripts/bootstrap-operators.ts",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:backup": "tsx --require dotenv/config scripts/postgres-backup.ts backup",
+    "db:restore": "tsx --require dotenv/config scripts/postgres-backup.ts restore"
   },
   "prisma": {
-    "seed": "tsx --require dotenv/config scripts/safe-seed.ts"
+    "seed": "tsx --require dotenv/config scripts/bootstrap-operators.ts"
   },
   "devDependencies": {
     "@next/swc-wasm-nodejs": "13.5.1",

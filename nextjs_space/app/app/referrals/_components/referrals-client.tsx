@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, BadgeCheck, DollarSign, Sparkles } from 'lucide-react';
+import { Users, BadgeCheck, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Container } from '@/components/layouts/container';
 import { PageHeader } from '@/components/layouts/page-header';
 import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 
 interface Partner {
   id: string;
@@ -41,7 +40,7 @@ export function ReferralsClient() {
       <PageHeader
         title="Referral Partners"
         description="Manage your partner network, monitor referrals, and track commissions."
-        actions={<Link href="/partner/signup" className="text-sm text-primary hover:underline">+ Invite Partner</Link>}
+        actions={<span className="text-xs text-muted-foreground">Partner self-service paused for team-only dogfood</span>}
       />
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -59,7 +58,7 @@ export function ReferralsClient() {
           {loading ? (
             <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
           ) : partners?.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">No partners yet. Invite partners to grow your channel.</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">No partners yet. Partner self-service is paused during team-only dogfood.</div>
           ) : (
             <div className="divide-y divide-border">
               {partners.map((p) => (

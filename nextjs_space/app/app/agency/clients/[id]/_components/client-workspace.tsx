@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { Container } from '@/components/layouts/container'
 import { PageHeader } from '@/components/layouts/page-header'
@@ -14,8 +14,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, Globe, MapPin, Sparkles, Trash2, ExternalLink, Copy, CheckCircle2, Download } from 'lucide-react'
+import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, KeyRound, Sparkles, Trash2, ExternalLink, Download } from 'lucide-react'
 import { AgencyToolPanel } from './agency-tool-panel'
+import { ClientAccessPanel, type ClientAccessRequest } from './client-access-panel'
 import { WorkOrderViewer } from './work-order-viewer'
 
 interface WorkOrder {
@@ -85,9 +86,10 @@ interface Client {
   clientNotes: ClientNote[]
   prospects: Prospect[]
   intelligence: ClientIntelligence | null
+  accessRequests: ClientAccessRequest[]
 }
 
-export function ClientWorkspace({ client }: { client: Client }) {
+export function ClientWorkspace({ client, currentUserRole }: { client: Client; currentUserRole: string | null }) {
   const router = useRouter()
   const [activeWorkOrder, setActiveWorkOrder] = useState<WorkOrder | null>(null)
   const [optimisticOrders, setOptimisticOrders] = useState<WorkOrder[]>(client.workOrders)
@@ -232,6 +234,7 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <TabsTrigger value="work-orders"><FileText className="h-4 w-4 mr-2"/>Work Orders ({orders.length})</TabsTrigger>
           <TabsTrigger value="prospects"><Sparkles className="h-4 w-4 mr-2"/>Prospects ({client.prospects.length})</TabsTrigger>
           <TabsTrigger value="intelligence"><Sparkles className="h-4 w-4 mr-2"/>Intelligence</TabsTrigger>
+          <TabsTrigger value="access"><KeyRound className="h-4 w-4 mr-2"/>Access ({client.accessRequests.length})</TabsTrigger>
           <TabsTrigger value="notes"><StickyNote className="h-4 w-4 mr-2"/>Notes ({client.clientNotes.length})</TabsTrigger>
           <TabsTrigger value="profile"><Edit3 className="h-4 w-4 mr-2"/>Profile</TabsTrigger>
         </TabsList>
@@ -250,6 +253,10 @@ export function ClientWorkspace({ client }: { client: Client }) {
             onRefresh={refreshIntelligence}
             onUploadGsc={uploadGscExport}
           />
+        </TabsContent>
+
+        <TabsContent value="access" className="mt-6">
+          <ClientAccessPanel clientId={client.id} initialRequests={client.accessRequests} currentUserRole={currentUserRole} />
         </TabsContent>
 
         <TabsContent value="prospects" className="mt-6 space-y-3">

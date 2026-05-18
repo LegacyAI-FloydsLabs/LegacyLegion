@@ -1,11 +1,12 @@
 generator client {
-    provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ============== AUTH (NextAuth) ==============
@@ -21,15 +22,18 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts        Account[]
-  sessions        Session[]
-  assignedLeads   Lead[]    @relation("AssignedTo")
-  notes           Note[]
-  activities      Activity[]
-  referralPartner ReferralPartner?
-  clientNotes     ClientNote[]
-  workOrders      ClientWorkOrder[] @relation("WorkAuthor")
-  agentThreads   AgentThread[] @relation("UserAgentThreads")
+  accounts              Account[]
+  sessions              Session[]
+  assignedLeads         Lead[]                @relation("AssignedTo")
+  notes                 Note[]
+  activities            Activity[]
+  referralPartner       ReferralPartner?
+  clientNotes           ClientNote[]
+  workOrders            ClientWorkOrder[]     @relation("WorkAuthor")
+  agentThreads          AgentThread[]         @relation("UserAgentThreads")
+  clientAccessRequests  ClientAccessRequest[] @relation("ClientAccessRequester")
+  clientAccessApprovals ClientAccessRequest[] @relation("ClientAccessApprover")
+  clientAccessEvents    ClientAccessEvent[]   @relation("ClientAccessEventActor")
 }
 
 model Account {
@@ -46,6 +50,7 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
 }
 
@@ -61,67 +66,68 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@unique([identifier, token])
 }
 
 // ============== CORE LEAD ==============
 
 model Lead {
-  id                String   @id @default(cuid())
-  businessName      String
-  ownerName         String
-  email             String
-  phone             String?
-  industry          String   // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
-  city              String?
-  state             String?
+  id                    String  @id @default(cuid())
+  businessName          String
+  ownerName             String
+  email                 String
+  phone                 String?
+  industry              String // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
+  city                  String?
+  state                 String?
   currentMarketingSpend String? // "<500" | "500-2000" | "2000-5000" | "5000-10000" | "10000+"
-  revenueRange      String?     // "<500K" | "500K-1M" | "1M-5M" | "5M-20M" | "20M+"
-  employeeCount     String?     // "1-4" | "5-15" | "16-50" | "51-150" | "150+"
-  biggestPainPoint  String?  @db.Text
-  currentProvider   String?
-  website           String?
+  revenueRange          String? // "<500K" | "500K-1M" | "1M-5M" | "5M-20M" | "20M+"
+  employeeCount         String? // "1-4" | "5-15" | "16-50" | "51-150" | "150+"
+  biggestPainPoint      String? @db.Text
+  currentProvider       String?
+  website               String?
 
   // Pipeline
-  status            String   @default("NEW") // NEW | CONTACTED | DISCOVERY | PROPOSAL | NEGOTIATION | WON | LOST
-  source            String   @default("WEB_FORM") // WEB_FORM | CHAT_WIDGET | REFERRAL | MANUAL | CSV_IMPORT | LINKEDIN
-  channel           String?  // organic, paid, referral, etc.
+  status  String  @default("NEW") // NEW | CONTACTED | DISCOVERY | PROPOSAL | NEGOTIATION | WON | LOST
+  source  String  @default("WEB_FORM") // WEB_FORM | CHAT_WIDGET | REFERRAL | MANUAL | CSV_IMPORT | LINKEDIN
+  channel String? // organic, paid, referral, etc.
 
   // Scoring
-  score             Int      @default(0) // 0-100
-  scoreBreakdown    Json?
-  qualification     String?  // MQL | SQL | DISQUALIFIED
+  score          Int     @default(0) // 0-100
+  scoreBreakdown Json?
+  qualification  String? // MQL | SQL | DISQUALIFIED
 
   // Pipeline value
-  estimatedMRR      Int?
-  proposedTier      String?  // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
+  estimatedMRR Int?
+  proposedTier String? // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
 
   // AI Assessment
-  aiAssessment      String?  @db.Text
-  aiAssessmentJson  Json?
-  aiAssessedAt      DateTime?
+  aiAssessment     String?   @db.Text
+  aiAssessmentJson Json?
+  aiAssessedAt     DateTime?
 
   // Assignment
-  assignedToId      String?
-  assignedTo        User?    @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedTo", fields: [assignedToId], references: [id])
 
   // Referral attribution
   referralPartnerId String?
   referralPartner   ReferralPartner? @relation(fields: [referralPartnerId], references: [id])
 
   // Won/Lost
-  wonAt             DateTime?
-  lostAt            DateTime?
-  lostReason        String?
-  signedTier        String?
-  signedMRR         Int?
+  wonAt      DateTime?
+  lostAt     DateTime?
+  lostReason String?
+  signedTier String?
+  signedMRR  Int?
 
-  notes             Note[]
-  activities        Activity[]
-  chatSessions      ChatSession[]
+  notes        Note[]
+  activities   Activity[]
+  chatSessions ChatSession[]
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([source])
@@ -138,6 +144,7 @@ model Note {
   createdAt DateTime @default(now())
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id])
+
   @@index([leadId])
 }
 
@@ -145,13 +152,14 @@ model Activity {
   id        String   @id @default(cuid())
   leadId    String
   authorId  String?
-  type      String   // CALL | EMAIL | MEETING | STATUS_CHANGE | NOTE_ADDED | AI_ASSESSMENT | CHAT | SYSTEM
+  type      String // CALL | EMAIL | MEETING | STATUS_CHANGE | NOTE_ADDED | AI_ASSESSMENT | CHAT | SYSTEM
   title     String
   body      String?  @db.Text
   metadata  Json?
   createdAt DateTime @default(now())
   lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   author    User?    @relation(fields: [authorId], references: [id])
+
   @@index([leadId])
   @@index([createdAt])
 }
@@ -159,120 +167,122 @@ model Activity {
 // ============== REFERRAL ==============
 
 model ReferralPartner {
-  id              String   @id @default(cuid())
-  userId          String?  @unique
-  user            User?    @relation(fields: [userId], references: [id])
-  name            String
-  email           String   @unique
-  phone           String?
-  company         String?
-  category        String   // INSURANCE | ACCOUNTANT | CONSULTANT | EXISTING_CLIENT | OTHER
-  tier            String   @default("BRONZE") // BRONZE | SILVER | GOLD
-  partnerCode     String   @unique
-  active          Boolean  @default(true)
-  totalReferrals  Int      @default(0)
-  wonReferrals    Int      @default(0)
-  lifetimeCommission Int   @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String?  @unique
+  user               User?    @relation(fields: [userId], references: [id])
+  name               String
+  email              String   @unique
+  phone              String?
+  company            String?
+  category           String // INSURANCE | ACCOUNTANT | CONSULTANT | EXISTING_CLIENT | OTHER
+  tier               String   @default("BRONZE") // BRONZE | SILVER | GOLD
+  partnerCode        String   @unique
+  active             Boolean  @default(true)
+  totalReferrals     Int      @default(0)
+  wonReferrals       Int      @default(0)
+  lifetimeCommission Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  leads           Lead[]
-  submissions     ReferralSubmission[]
+  leads       Lead[]
+  submissions ReferralSubmission[]
 }
 
 model ReferralSubmission {
-  id          String   @id @default(cuid())
-  partnerId   String
-  partner     ReferralPartner @relation(fields: [partnerId], references: [id])
+  id           String          @id @default(cuid())
+  partnerId    String
+  partner      ReferralPartner @relation(fields: [partnerId], references: [id])
   businessName String
-  contactName String
+  contactName  String
   contactEmail String
   contactPhone String?
-  industry    String?
-  notes       String?  @db.Text
-  status      String   @default("PENDING") // PENDING | ACCEPTED | CONTACTED | WON | LOST
-  leadId      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  industry     String?
+  notes        String?         @db.Text
+  status       String          @default("PENDING") // PENDING | ACCEPTED | CONTACTED | WON | LOST
+  leadId       String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 // ============== CHAT WIDGET ==============
 
 model ChatSession {
-  id            String   @id @default(cuid())
-  visitorId     String   // anonymous fingerprint
-  leadId        String?
-  lead          Lead?    @relation(fields: [leadId], references: [id])
-  websiteHost   String?  // host where widget is embedded
-  qualified     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  messages      ChatMessage[]
+  id          String        @id @default(cuid())
+  visitorId   String // anonymous fingerprint
+  leadId      String?
+  lead        Lead?         @relation(fields: [leadId], references: [id])
+  websiteHost String? // host where widget is embedded
+  qualified   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
+  id        String      @id @default(cuid())
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role      String   // user | assistant | system
-  content   String   @db.Text
-  createdAt DateTime @default(now())
+  role      String // user | assistant | system
+  content   String      @db.Text
+  createdAt DateTime    @default(now())
+
   @@index([sessionId])
 }
 
 // ============== UPLOADS ==============
 
 model UploadedFile {
-  id            String   @id @default(cuid())
-  filename      String
-  cloudStoragePath String  @unique
-  isPublic      Boolean  @default(false)
-  contentType   String?
-  uploadedById  String?
-  purpose       String?  // CSV_IMPORT | ATTACHMENT
-  rowsImported  Int?
-  createdAt     DateTime @default(now())
+  id               String   @id @default(cuid())
+  filename         String
+  cloudStoragePath String   @unique
+  isPublic         Boolean  @default(false)
+  contentType      String?
+  uploadedById     String?
+  purpose          String? // CSV_IMPORT | ATTACHMENT
+  rowsImported     Int?
+  createdAt        DateTime @default(now())
 }
 
 // ============== AGENCY MODE (Internal LegacyAI work FOR clients) ==============
 
 model Client {
-  id              String   @id @default(cuid())
+  id         String  @id @default(cuid())
   // From a converted lead, optional
-  fromLeadId      String?  @unique
+  fromLeadId String? @unique
 
   // Identity
-  businessName    String
-  ownerName       String?
-  email           String?
-  phone           String?
-  industry        String   // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
-  city            String?
-  state           String?
-  website         String?
-  gbpUrl          String?  // Google Business Profile URL
-  facebookUrl     String?
-  linkedinUrl     String?
+  businessName String
+  ownerName    String?
+  email        String?
+  phone        String?
+  industry     String // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
+  city         String?
+  state        String?
+  website      String?
+  gbpUrl       String? // Google Business Profile URL
+  facebookUrl  String?
+  linkedinUrl  String?
 
   // Engagement
-  tier            String   @default("LAUNCH_PAD") // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
-  monthlyMRR      Int      @default(0)
-  status          String   @default("ACTIVE")     // ACTIVE | ONBOARDING | PAUSED | CHURNED
-  onboardedAt     DateTime?
-  churnedAt       DateTime?
+  tier        String    @default("LAUNCH_PAD") // LAUNCH_PAD | GROWTH_ENGINE | MARKET_DOMINATOR
+  monthlyMRR  Int       @default(0)
+  status      String    @default("ACTIVE") // ACTIVE | ONBOARDING | PAUSED | CHURNED
+  onboardedAt DateTime?
+  churnedAt   DateTime?
 
   // Strategy notes pinned at top of workspace
-  strategyBrief   String?  @db.Text
-  primaryGoals    Json?    // free-form strategic priorities
+  strategyBrief String? @db.Text
+  primaryGoals  Json? // free-form strategic priorities
 
-  workOrders      ClientWorkOrder[]
-  clientNotes     ClientNote[]
-  agentThreads   AgentThread[]
+  workOrders   ClientWorkOrder[]
+  clientNotes  ClientNote[]
+  agentThreads AgentThread[]
 
-  prospects       Prospect[]
-  intelligence    ClientIntelligence?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  prospects      Prospect[]
+  intelligence   ClientIntelligence?
+  accessRequests ClientAccessRequest[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   @@index([status])
   @@index([industry])
@@ -280,24 +290,24 @@ model Client {
 }
 
 model ClientWorkOrder {
-  id           String   @id @default(cuid())
-  clientId     String
-  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  authorId     String?
-  author       User?    @relation("WorkAuthor", fields: [authorId], references: [id])
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?   @relation("WorkAuthor", fields: [authorId], references: [id])
 
-  type         String   // SEO_AUDIT | GBP_OPTIMIZATION | COMPETITOR_SWEEP | KEYWORD_RESEARCH | CONTENT_BRIEF | AD_COPY | EMAIL_CAMPAIGN | LOCAL_LANDING_PAGE | REVIEW_RESPONSE
-  title        String
-  status       String   @default("DRAFT")     // DRAFT | IN_PROGRESS | REVIEW | DELIVERED | ARCHIVED
-  inputJson    Json?    // params used to generate
-  outputMarkdown String? @db.Text             // the deliverable
-  intelligenceJson Json?                      // raw Pinecone matches used
-  tokensUsed   Int?
-  generatedAt  DateTime?
-  deliveredAt  DateTime?
+  type             String // SEO_AUDIT | GBP_OPTIMIZATION | COMPETITOR_SWEEP | KEYWORD_RESEARCH | CONTENT_BRIEF | AD_COPY | EMAIL_CAMPAIGN | LOCAL_LANDING_PAGE | REVIEW_RESPONSE
+  title            String
+  status           String    @default("DRAFT") // DRAFT | IN_PROGRESS | REVIEW | DELIVERED | ARCHIVED
+  inputJson        Json? // params used to generate
+  outputMarkdown   String?   @db.Text // the deliverable
+  intelligenceJson Json? // raw Pinecone matches used
+  tokensUsed       Int?
+  generatedAt      DateTime?
+  deliveredAt      DateTime?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([clientId])
   @@index([type])
@@ -318,18 +328,63 @@ model ClientNote {
   @@index([clientId])
 }
 
+model ClientAccessRequest {
+  id          String  @id @default(cuid())
+  clientId    String
+  client      Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  requesterId String?
+  requester   User?   @relation("ClientAccessRequester", fields: [requesterId], references: [id], onDelete: SetNull)
+  approverId  String?
+  approver    User?   @relation("ClientAccessApprover", fields: [approverId], references: [id], onDelete: SetNull)
+
+  platform         String // WEBSITE_CMS | GBP | GSC | GA4 | GOOGLE_ADS | META | EMAIL | SOCIAL | OTHER
+  resourceUrl      String?
+  externalVaultRef String? // Reference only; never store raw credentials or recovery material.
+  status           String    @default("NEEDED") // NEEDED | REQUESTED | RECEIVED_IN_VAULT | APPROVED | REJECTED | REVOKED
+  requestNotes     String?   @db.Text
+  decisionNotes    String?   @db.Text
+  requestedAt      DateTime  @default(now())
+  receivedAt       DateTime?
+  approvedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  events ClientAccessEvent[]
+
+  @@index([clientId, status])
+  @@index([platform])
+  @@index([updatedAt])
+}
+
+model ClientAccessEvent {
+  id              String              @id @default(cuid())
+  accessRequestId String
+  accessRequest   ClientAccessRequest @relation(fields: [accessRequestId], references: [id], onDelete: Cascade)
+  actorId         String?
+  actor           User?               @relation("ClientAccessEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type            String // CREATED | UPDATED | STATUS_CHANGED
+  fromStatus      String?
+  toStatus        String?
+  notes           String?             @db.Text
+  createdAt       DateTime            @default(now())
+
+  @@index([accessRequestId, createdAt])
+  @@index([actorId])
+}
+
 model AgentThread {
-  id           String      @id @default(cuid())
-  userId       String
-  user         User        @relation("UserAgentThreads", fields: [userId], references: [id], onDelete: Cascade)
-  persona      String
-  clientId     String?
-  client       Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  title        String?
-  archivedAt   DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  turns        AgentTurn[]
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation("UserAgentThreads", fields: [userId], references: [id], onDelete: Cascade)
+  persona    String
+  clientId   String?
+  client     Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title      String?
+  archivedAt DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  turns      AgentTurn[]
 
   @@index([userId, persona])
   @@index([clientId])
@@ -351,11 +406,11 @@ model AgentTurn {
 }
 
 model Prospect {
-  id                   String   @id @default(cuid())
-  source               String
-  sourceId             String
-  clientId             String?
-  client               Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  id       String  @id @default(cuid())
+  source   String
+  sourceId String
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   companyName          String?
   companyDomain        String?
@@ -363,22 +418,22 @@ model Prospect {
   companyEmployeeCount Int?
   companyRevenue       Int?
 
-  personFirstName      String?
-  personLastName       String?
-  personTitle          String?
-  personEmail          String?
-  personPhone          String?
-  personLinkedinUrl    String?
+  personFirstName   String?
+  personLastName    String?
+  personTitle       String?
+  personEmail       String?
+  personPhone       String?
+  personLinkedinUrl String?
 
-  city                 String?
-  state                String?
-  country              String?
+  city    String?
+  state   String?
+  country String?
 
-  enrichedJson         Json?
-  promotedToLeadId     String?  @unique
+  enrichedJson     Json?
+  promotedToLeadId String? @unique
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([source, sourceId])
   @@index([clientId])
@@ -387,23 +442,22 @@ model Prospect {
 }
 
 model LeadGenCampaign {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   ownerId        String
   clientId       String?
   name           String
   source         String
   criteriaJson   Json
-  status         String   @default("ACTIVE")
-  totalFound     Int      @default(0)
-  totalPersisted Int      @default(0)
+  status         String    @default("ACTIVE")
+  totalFound     Int       @default(0)
+  totalPersisted Int       @default(0)
   lastRunAt      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([ownerId])
   @@index([clientId])
 }
-
 
 model ClientIntelligence {
   id              String   @id @default(cuid())
