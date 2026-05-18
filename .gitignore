@@ -11,8 +11,11 @@ build/
 .cache/
 .turbo/
 tsconfig.tsbuildinfo
+.vercel/
+**/.vercel/
 **/.yarn/global/
 **/.yarn/install-state.gz
+**/.yarn/cache/
 .floyd/
 .floyd/*.hostedapp-symlink
 .floyd/pgdata/

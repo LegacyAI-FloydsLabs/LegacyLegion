@@ -37,7 +37,7 @@ Issues move forward through these states. Backward transitions are allowed if ne
 
 | ID | Created | Title | Status | Owner | Evidence / Links | Resolution Proof |
 |---|---|---|---|---|---|---|
-| ISSUE-0001 | 2026-05-17 15:27 -0400 | Target-environment verification not yet rebuilt after branch canonicalization | New | Unassigned | `plans/legacy-legion-llm-led-marketing-company.md` Step 2; `SSOT/LegacyLegion-phase1_SSOT.md` Deployment marks production/staging UNVERIFIED | N/A |
+| ISSUE-0001 | 2026-05-17 15:27 -0400 | Target-environment verification not yet rebuilt after branch canonicalization | Verified | Unassigned | `plans/legacy-legion-llm-led-marketing-company.md` Step 2; local verification passed on 2026-05-18; phase tests 1-5 passed after approved external credential use; Vercel project root is `nextjs_space`; production deployment is Ready | Local proof: full verification exit 0; Phase 4 memory test PASS; Vercel build output completed; deployment `dpl_3PjxCm3DS6eyxofkjZPxqUbuoC1J` Ready; protected smoke via `vercel curl /` returned HTTP 200 |
 
 <!-- Each new issue gets its own row. Keep rows compact; if a row needs more detail, -->
 <!-- create a companion file at Issues/NNNN-brief-description.md and link it in Evidence. -->
@@ -89,6 +89,9 @@ Companion files should contain:
 
 - 2026-05-12T14:58:52-0400 — Initialized issues ledger.
 - 2026-05-17 15:27 -0400 — Replaced template issue with live verification gap for target-environment evidence.
+- 2026-05-18 00:49 EDT — Updated ISSUE-0001 with current local pre-merge verification proof and retained blocker for production/staging target-environment evidence.
+- 2026-05-18 00:54 EDT — Added phase test evidence: phase1/2/3 pass, phase5 pass with throwaway PostgreSQL, phase4 memory verification remains blocked without approved Pinecone credential use.
+- 2026-05-18 01:46 EDT — Verified ISSUE-0001 after approved external Phase 4 credential use, Vercel root-directory correction, production deployment, and protected HTTP 200 smoke check.
 
 <!-- Append new entries BELOW this comment line, keeping them in chronological order. -->
 <!-- Never edit or remove existing entries — this is an audit trail. -->
