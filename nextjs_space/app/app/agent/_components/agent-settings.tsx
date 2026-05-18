@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bot, Code2, Copy, CheckCircle2, ExternalLink } from 'lucide-react'
@@ -8,9 +8,14 @@ import { toast } from 'sonner'
 
 export function AgentSettings({ configured, agentUrl }: { configured: boolean; agentUrl: string }) {
   const [copied, setCopied] = useState(false)
+  const [origin, setOrigin] = useState('')
+
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   const embedSnippet = `<!-- LegacyLegion Chat Widget -->
-<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/widget/loader.js" async></script>`
+<script src="${origin}/widget/loader.js" async></script>`
 
   function copy() {
     navigator.clipboard.writeText(embedSnippet)

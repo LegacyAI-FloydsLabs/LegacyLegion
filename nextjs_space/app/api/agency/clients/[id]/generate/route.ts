@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { searchSEOIntelligence, summarizeMatches } from '@/lib/pinecone'
 import { AGENCY_TOOLS, AgencyToolType, buildAgencyPrompt } from '@/lib/agency-prompts'
+import { upsertClientWorkOrderMemory } from '@/lib/agents/memory'
 
 const VALID_TYPES = new Set(AGENCY_TOOLS.map(t => t.type))
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const userInput = String(body?.input ?? '').trim()
   if (!VALID_TYPES.has(type)) return new Response('Invalid tool type', { status: 400 })
 
-  const client = await prisma.client.findUnique({ where: { id: params.id } })
+  const client = await prisma.client.findUnique({ where: { id: params.id }, include: { intelligence: true } })
   if (!client) return new Response('Client not found', { status: 404 })
 
   // Build prompt
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       tier: client.tier,
       monthlyMRR: client.monthlyMRR,
       strategyBrief: client.strategyBrief,
+      liveGBP: client.intelligence?.gbpSnapshotJson as any,
     },
     intelligenceContext: '',
     userInput,
@@ -63,11 +65,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     },
   })
 
-  const upstream = await fetch('https://apps.abacus.ai/v1/chat/completions', {
+  const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'gpt-5.4-mini',
+      model: 'route-llm',
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: userPrompt },
@@ -126,6 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             generatedAt: new Date(),
           },
         })
+        await upsertClientWorkOrderMemory(wo.id)
       } else {
         await prisma.clientWorkOrder.update({ where: { id: wo.id }, data: { status: 'DRAFT' } })
       }

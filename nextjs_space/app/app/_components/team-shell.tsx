@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Users, KanbanSquare, BarChart3, Calculator,
   Bot, Network, Upload, LogOut, PanelLeft, Sparkles,
   Briefcase, FileSearch, Wrench, Target, Building2, ClipboardList,
-  Megaphone, ArrowRight,
+  Megaphone, ArrowRight, MessageSquare,
 } from 'lucide-react'
 
 const SALES_NAV = [
@@ -31,6 +31,8 @@ const AGENCY_NAV = [
   { href: '/app/agency', label: 'Clients', icon: Building2 },
   { href: '/app/agency/work-orders', label: 'Work Orders', icon: ClipboardList },
   { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
+  { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
+  { href: '/app/agency/prospects', label: 'Prospects', icon: FileSearch },
   { href: '/app/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
 ]
@@ -137,7 +139,7 @@ export function TeamShell({
                 <div className="text-sm font-medium truncate">{user?.name || user?.email}</div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{user?.role}</div>
               </div>
-              <Button variant="ghost" size="icon-sm" onClick={() => signOut({ callbackUrl: '/' })} title="Sign out">
+              <Button variant="ghost" size="icon-sm" onClick={async () => { await signOut({ redirect: false }); router.replace('/login') }} aria-label="Sign out" title="Sign out">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>

@@ -24,16 +24,16 @@ export default async function AgencyHomePage() {
   // determine which won leads are already converted
   const converted = new Set(
     (await prisma.client.findMany({ where: { fromLeadId: { not: null } }, select: { fromLeadId: true } }))
-      .map(c => c.fromLeadId as string)
+      .map((c: any) => c.fromLeadId as string)
   )
   return (
     <ClientsRoster
-      clients={clients.map(c => ({
+      clients={clients.map((c: any) => ({
         ...c,
         createdAt: c.createdAt.toISOString(),
         onboardedAt: c.onboardedAt?.toISOString() ?? null,
       }))}
-      wonLeads={wonLeads.map(l => ({
+      wonLeads={wonLeads.map((l: any) => ({
         ...l,
         wonAt: l.wonAt?.toISOString() ?? null,
         alreadyConverted: converted.has(l.id),

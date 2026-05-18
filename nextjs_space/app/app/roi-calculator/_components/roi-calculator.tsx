@@ -30,7 +30,7 @@ export function ROICalculator() {
     const roi = annualCost > 0 ? Math.round(((annualRevenue - annualCost) / annualCost) * 100) : 0
     const breakEvenLeads = avgJobValue > 0 && closeRate > 0 ? Math.ceil(cost / (avgJobValue * (closeRate / 100))) : 0
     return { closes, monthlyRevenue, annualRevenue, annualCost, roi, breakEvenLeads }
-  }, [tier, avgJobValue, closeRate, extraLeads, cost])
+  }, [avgJobValue, closeRate, extraLeads, cost])
 
   const chartData = [
     { month: 'Mo 1', revenue: result.monthlyRevenue, cost },
@@ -43,23 +43,23 @@ export function ROICalculator() {
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-5">
       <Card><CardContent className="p-5 space-y-4">
         <div className="space-y-2">
-          <Label>LegacyAI Tier</Label>
+          <Label htmlFor="roi-tier">LegacyAI Tier</Label>
           <Select value={tier} onValueChange={setTier}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="roi-tier" aria-label="LegacyAI Tier"><SelectValue /></SelectTrigger>
             <SelectContent>{TIERS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between"><Label>Average job value</Label><span className="font-mono text-sm">${avgJobValue.toLocaleString()}</span></div>
-          <Input type="number" value={avgJobValue} onChange={(e) => setAvgJobValue(Math.max(0, Number(e.target.value || 0)))} />
+          <div className="flex justify-between"><Label htmlFor="roi-average-job-value">Average job value</Label><span className="font-mono text-sm">${avgJobValue.toLocaleString()}</span></div>
+          <Input id="roi-average-job-value" aria-label="Average job value" type="number" value={avgJobValue} onChange={(e) => setAvgJobValue(Math.max(0, Number(e.target.value || 0)))} />
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between"><Label>Close rate</Label><span className="font-mono text-sm">{closeRate}%</span></div>
-          <Slider value={[closeRate]} onValueChange={(v) => setCloseRate(v?.[0] ?? 25)} max={80} step={1} />
+          <div className="flex justify-between"><Label htmlFor="roi-close-rate">Close rate</Label><span className="font-mono text-sm">{closeRate}%</span></div>
+          <Slider id="roi-close-rate" aria-label="Close rate" value={[closeRate]} onValueChange={(v) => setCloseRate(v?.[0] ?? 25)} max={80} step={1} />
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between"><Label>Extra leads / month</Label><span className="font-mono text-sm">{extraLeads}</span></div>
-          <Slider value={[extraLeads]} onValueChange={(v) => setExtraLeads(v?.[0] ?? 15)} max={100} step={1} />
+          <div className="flex justify-between"><Label htmlFor="roi-extra-leads">Extra leads / month</Label><span className="font-mono text-sm">{extraLeads}</span></div>
+          <Slider id="roi-extra-leads" aria-label="Extra leads per month" value={[extraLeads]} onValueChange={(v) => setExtraLeads(v?.[0] ?? 15)} max={100} step={1} />
         </div>
         <p className="text-xs text-muted-foreground pt-2">Tweak the inputs while you’re on the call. The numbers update instantly.</p>
       </CardContent></Card>

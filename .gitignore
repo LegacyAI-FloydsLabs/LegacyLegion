@@ -10,3 +10,16 @@ build/
 .DS_Store
 .cache/
 .turbo/
+tsconfig.tsbuildinfo
+.vercel/
+**/.vercel/
+**/.yarn/global/
+**/.yarn/install-state.gz
+**/.yarn/cache/
+.floyd/
+.floyd/*.hostedapp-symlink
+.floyd/pgdata/
+.floyd/pglog
+nextjs_space/dogfood-output/
+nextjs_space/public-api-backups/
+nextjs_space/external/marketing-open-source/

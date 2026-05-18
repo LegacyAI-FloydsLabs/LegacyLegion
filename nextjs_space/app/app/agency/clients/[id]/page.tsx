@@ -10,6 +10,8 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
     include: {
       workOrders: { orderBy: { createdAt: 'desc' } },
       clientNotes: { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true, email: true } } } },
+      prospects: { orderBy: { createdAt: 'desc' } },
+      intelligence: true,
     },
   })
   if (!client) notFound()
@@ -22,17 +24,27 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
         updatedAt: client.updatedAt.toISOString(),
         onboardedAt: client.onboardedAt?.toISOString() ?? null,
         churnedAt: client.churnedAt?.toISOString() ?? null,
-        workOrders: client.workOrders.map(w => ({
+        workOrders: client.workOrders.map((w: any) => ({
           ...w,
           createdAt: w.createdAt.toISOString(),
           updatedAt: w.updatedAt.toISOString(),
           generatedAt: w.generatedAt?.toISOString() ?? null,
           deliveredAt: w.deliveredAt?.toISOString() ?? null,
         })),
-        clientNotes: client.clientNotes.map(n => ({
+        clientNotes: client.clientNotes.map((n: any) => ({
           ...n,
           createdAt: n.createdAt.toISOString(),
         })),
+        prospects: client.prospects.map((p: any) => ({
+          ...p,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+        })),
+        intelligence: client.intelligence ? {
+          gbpSnapshotJson: client.intelligence.gbpSnapshotJson,
+          gscSummaryJson: client.intelligence.gscSummaryJson,
+          fetchedAt: client.intelligence.fetchedAt.toISOString(),
+        } : null,
       }}
     />
   )

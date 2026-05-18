@@ -13,7 +13,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, Globe, MapPin, Sparkles, Trash2, ExternalLink, Copy, CheckCircle2 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, Globe, MapPin, Sparkles, Trash2, ExternalLink, Copy, CheckCircle2, Download } from 'lucide-react'
 import { AgencyToolPanel } from './agency-tool-panel'
 import { WorkOrderViewer } from './work-order-viewer'
 
@@ -36,6 +37,27 @@ interface ClientNote {
   pinned: boolean
   createdAt: string
   author?: { name: string | null; email: string | null } | null
+}
+
+interface Prospect {
+  id: string
+  source: string
+  companyName: string | null
+  companyDomain: string | null
+  personFirstName: string | null
+  personLastName: string | null
+  personTitle: string | null
+  personEmail: string | null
+  city: string | null
+  state: string | null
+  promotedToLeadId: string | null
+  createdAt: string
+}
+
+interface ClientIntelligence {
+  gbpSnapshotJson: any | null
+  gscSummaryJson: any | null
+  fetchedAt: string
 }
 
 interface Client {
@@ -61,6 +83,8 @@ interface Client {
   churnedAt: string | null
   workOrders: WorkOrder[]
   clientNotes: ClientNote[]
+  prospects: Prospect[]
+  intelligence: ClientIntelligence | null
 }
 
 export function ClientWorkspace({ client }: { client: Client }) {
@@ -69,6 +93,8 @@ export function ClientWorkspace({ client }: { client: Client }) {
   const [optimisticOrders, setOptimisticOrders] = useState<WorkOrder[]>(client.workOrders)
   const [noteText, setNoteText] = useState('')
   const [busyNote, setBusyNote] = useState(false)
+  const [busyIntelligence, setBusyIntelligence] = useState(false)
+  const [busyExport, setBusyExport] = useState<string | null>(null)
 
   const orders = optimisticOrders
   const inProgress = orders.filter(o => o.status === 'IN_PROGRESS' || o.status === 'REVIEW').length
@@ -107,6 +133,62 @@ export function ClientWorkspace({ client }: { client: Client }) {
     if (res.ok) { toast.success('Client deleted'); router.push('/app/agency') } else toast.error('Failed')
   }
 
+  async function refreshIntelligence() {
+    setBusyIntelligence(true)
+    try {
+      const res = await fetch(`/api/agency/clients/${client.id}/intelligence/refresh`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success('GBP snapshot refreshed')
+      router.refresh()
+    } catch {
+      toast.error('Could not refresh GBP snapshot')
+    } finally {
+      setBusyIntelligence(false)
+    }
+  }
+
+  async function uploadGscExport(file: File | null) {
+    if (!file) return
+    setBusyIntelligence(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`/api/agency/clients/${client.id}/intelligence/gsc-export`, { method: 'POST', body: form })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success('GSC export imported')
+      router.refresh()
+    } catch {
+      toast.error('Could not import GSC export')
+    } finally {
+      setBusyIntelligence(false)
+    }
+  }
+
+  async function exportSnapshot(format: 'md' | 'json' | 'pdf') {
+    setBusyExport(format)
+    try {
+      const res = await fetch(`/api/agency/clients/${client.id}/export?format=${format}`, { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      const blob = await res.blob()
+      const disposition = res.headers.get('Content-Disposition') ?? ''
+      const fallback = `${client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client'}-snapshot.${format}`
+      const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? fallback
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      toast.success(`Exported ${format.toUpperCase()} snapshot`)
+    } catch {
+      toast.error('Could not export client snapshot')
+    } finally {
+      setBusyExport(null)
+    }
+  }
+
   return (
     <Container size="xl">
       <div className="mb-3">
@@ -119,7 +201,17 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <>
             <Badge variant="outline" className={tierBadge(client.tier)}>{client.tier.replace('_',' ')}</Badge>
             <Badge variant="outline">${client.monthlyMRR}/mo</Badge>
-            <Button variant="ghost" size="sm" onClick={deleteClient}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={Boolean(busyExport)}><Download className="mr-2 h-4 w-4" />{busyExport ? 'Exporting…' : 'Export'}</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportSnapshot('md')}>Markdown snapshot</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('json')}>JSON snapshot</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('pdf')}>PDF snapshot</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="ghost" size="sm" onClick={deleteClient} aria-label={`Delete ${client.businessName}`} title={`Delete ${client.businessName}`}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
           </>
         }
       />
@@ -138,6 +230,8 @@ export function ClientWorkspace({ client }: { client: Client }) {
         <TabsList>
           <TabsTrigger value="tools"><Wrench className="h-4 w-4 mr-2"/>Agency Tools</TabsTrigger>
           <TabsTrigger value="work-orders"><FileText className="h-4 w-4 mr-2"/>Work Orders ({orders.length})</TabsTrigger>
+          <TabsTrigger value="prospects"><Sparkles className="h-4 w-4 mr-2"/>Prospects ({client.prospects.length})</TabsTrigger>
+          <TabsTrigger value="intelligence"><Sparkles className="h-4 w-4 mr-2"/>Intelligence</TabsTrigger>
           <TabsTrigger value="notes"><StickyNote className="h-4 w-4 mr-2"/>Notes ({client.clientNotes.length})</TabsTrigger>
           <TabsTrigger value="profile"><Edit3 className="h-4 w-4 mr-2"/>Profile</TabsTrigger>
         </TabsList>
@@ -146,6 +240,35 @@ export function ClientWorkspace({ client }: { client: Client }) {
           <AgencyToolPanel client={{
             id: client.id, businessName: client.businessName, industry: client.industry, city: client.city, state: client.state,
           }} onWorkOrderCreated={handleNewWorkOrder} onOpenWorkOrder={(wo) => setActiveWorkOrder(wo)} />
+        </TabsContent>
+
+        <TabsContent value="intelligence" className="mt-6 space-y-4">
+          <IntelligencePanel
+            intelligence={client.intelligence}
+            hasGbpUrl={Boolean(client.gbpUrl)}
+            busy={busyIntelligence}
+            onRefresh={refreshIntelligence}
+            onUploadGsc={uploadGscExport}
+          />
+        </TabsContent>
+
+        <TabsContent value="prospects" className="mt-6 space-y-3">
+          <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-medium">Client prospecting</div>
+              <div className="text-sm text-muted-foreground">Run a focused Lead-Gen Manager search, then promote qualified prospects into Leads.</div>
+            </div>
+            <Link href={`/app/agency/chat?persona=lead-gen-manager&clientId=${client.id}`}>
+              <Button>Run Prospect Search</Button>
+            </Link>
+          </Card>
+          {client.prospects.length === 0 ? (
+            <Card className="p-8 text-center text-sm text-muted-foreground">No prospects persisted for this client yet.</Card>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {client.prospects.map((prospect) => <ProspectCard key={prospect.id} prospect={prospect} />)}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="work-orders" className="mt-6">
@@ -222,6 +345,110 @@ export function ClientWorkspace({ client }: { client: Client }) {
         />
       )}
     </Container>
+  )
+}
+
+function IntelligencePanel({
+  intelligence, hasGbpUrl, busy, onRefresh, onUploadGsc,
+}: {
+  intelligence: ClientIntelligence | null
+  hasGbpUrl: boolean
+  busy: boolean
+  onRefresh: () => void
+  onUploadGsc: (file: File | null) => void
+}) {
+  const gbp = intelligence?.gbpSnapshotJson ?? null
+  const gsc = intelligence?.gscSummaryJson ?? null
+  return (
+    <div className="space-y-4">
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-medium">GBP live snapshot</div>
+            <div className="text-sm text-muted-foreground">Public Google Business Profile data only; no review scraping or OAuth.</div>
+          </div>
+          <Button onClick={onRefresh} disabled={busy || !hasGbpUrl}>{busy ? 'Refreshing…' : 'Refresh GBP'}</Button>
+        </div>
+        {!hasGbpUrl && <div className="mt-3 text-sm text-amber-300">Add a Google Business Profile URL in the Profile tab before refreshing.</div>}
+        {gbp ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetricCard label="Reviews" value={String(gbp.reviewCount ?? 0)} />
+            <MetricCard label="Photos" value={String(gbp.photoCount ?? 0)} />
+            <MetricCard label="Category" value={gbp.primaryCategory ?? '—'} />
+            <MetricCard label="Rating" value={gbp.rating ? String(gbp.rating) : '—'} />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No GBP snapshot persisted yet.</div>
+        )}
+      </Card>
+
+      <Card className="p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-medium">GSC CSV summary</div>
+            <div className="text-sm text-muted-foreground">Upload Search Console exports with Date, Query, Clicks, Impressions, CTR, Position.</div>
+          </div>
+          <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onUploadGsc(event.target.files?.[0] ?? null)} className="max-w-xs" />
+        </div>
+        {gsc ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3 lg:col-span-2">
+              <MetricCard label="Rows" value={String(gsc.rowCount ?? 0)} />
+              <MetricCard label="Queries" value={String(gsc.queryCount ?? 0)} />
+              <MetricCard label="Clicks" value={String(gsc.totalClicks ?? 0)} />
+            </div>
+            <QueryDeltaList title="Top movers" rows={gsc.topMovers ?? []} empty="No improving queries found." />
+            <QueryDeltaList title="Lost queries" rows={gsc.lostQueries ?? []} empty="No declining queries found." />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No GSC export imported yet.</div>
+        )}
+      </Card>
+    </div>
+  )
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return <Card className="p-3"><div className="text-xs text-muted-foreground">{label}</div><div className="mt-1 text-lg font-semibold">{value}</div></Card>
+}
+
+function QueryDeltaList({ title, rows, empty }: { title: string; rows: any[]; empty: string }) {
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium">{title}</div>
+      <div className="space-y-2">
+        {rows.slice(0, 5).map((row) => (
+          <Card key={row.query} className="p-3 text-sm">
+            <div className="font-medium">{row.query}</div>
+            <div className="text-xs text-muted-foreground">Clicks {row.clicksDelta >= 0 ? '+' : ''}{row.clicksDelta}; position {row.positionDelta >= 0 ? '+' : ''}{Number(row.positionDelta).toFixed(1)}</div>
+          </Card>
+        ))}
+        {rows.length === 0 && <div className="text-sm text-muted-foreground">{empty}</div>}
+      </div>
+    </div>
+  )
+}
+
+function ProspectCard({ prospect }: { prospect: Prospect }) {
+  const name = [prospect.personFirstName, prospect.personLastName].filter(Boolean).join(' ')
+  return (
+    <Card className="p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">{prospect.source}</div>
+          <div className="font-medium truncate">{name || prospect.companyName || 'Unnamed prospect'}</div>
+          <div className="text-sm text-muted-foreground truncate">{prospect.personTitle || prospect.companyName || '—'}</div>
+        </div>
+        <Badge variant="outline" className={prospect.promotedToLeadId ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300' : ''}>
+          {prospect.promotedToLeadId ? 'Promoted' : 'Prospect'}
+        </Badge>
+      </div>
+      <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+        <div>{prospect.personEmail ?? 'No email yet'}</div>
+        <div>{prospect.companyDomain ?? prospect.companyName ?? 'No company domain'}</div>
+        <div>{[prospect.city, prospect.state].filter(Boolean).join(', ') || 'No location'}</div>
+      </div>
+    </Card>
   )
 }
 

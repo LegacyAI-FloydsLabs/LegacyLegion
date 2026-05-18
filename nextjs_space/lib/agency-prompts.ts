@@ -1,7 +1,12 @@
 // Server-side prompt builders for Agency Mode tools.
 // These are the actual playbooks Ryan + the team will run on behalf of clients.
 
-export type AgencyToolType =
+import {
+  OPEN_SOURCE_MARKETING_TOOLS,
+  openSourceAgencyToolType,
+} from '@/lib/open-source-marketing-tool-catalog'
+
+type BuiltInAgencyToolType =
   | 'SEO_AUDIT'
   | 'GBP_OPTIMIZATION'
   | 'COMPETITOR_SWEEP'
@@ -12,6 +17,7 @@ export type AgencyToolType =
   | 'REVIEW_RESPONSE'
   | 'EMAIL_CAMPAIGN'
 
+export type AgencyToolType = BuiltInAgencyToolType | `OSS_${string}`
 export const AGENCY_TOOLS: { type: AgencyToolType; label: string; description: string; needsInput?: string }[] = [
   { type: 'SEO_AUDIT', label: 'SEO Audit', description: 'Full local SEO audit: technical, on-page, content gaps, link signals, quick wins.' },
   { type: 'GBP_OPTIMIZATION', label: 'GBP Optimization', description: 'Google Business Profile audit + 30/60/90 optimization plan.' },
@@ -22,9 +28,15 @@ export const AGENCY_TOOLS: { type: AgencyToolType; label: string; description: s
   { type: 'LOCAL_LANDING_PAGE', label: 'Local Landing Page', description: 'Draft a city/service landing page (hero, sections, FAQ, schema).', needsInput: 'Service + city (e.g. "AC repair Carmel IN")' },
   { type: 'REVIEW_RESPONSE', label: 'Review Response', description: 'Drafts an on-brand reply to a customer review.', needsInput: 'Paste the review text' },
   { type: 'EMAIL_CAMPAIGN', label: 'Email Campaign', description: '5-touch nurture sequence for the segment provided.', needsInput: 'Audience + goal' },
+  ...OPEN_SOURCE_MARKETING_TOOLS.map((tool) => ({
+    type: openSourceAgencyToolType(tool),
+    label: tool.name,
+    description: tool.platformUse,
+    needsInput: 'Goal, audience, URL, offer, or notes for this installed tool',
+  })),
 ]
 
-const BRAND_RULES = `You are LegacyAI's senior strategist working ON BEHALF OF the client below.
+export const BRAND_RULES = `You are LegacyAI's senior strategist working ON BEHALF OF the client below.
 LegacyAI is an Indianapolis AI-first marketing firm, partner-not-vendor model, month-to-month, client owns all assets.
 Writing rules:
 - Concrete, specific, and actionable. No marketing fluff.
@@ -44,9 +56,23 @@ interface BuildArgs {
     tier?: string | null
     monthlyMRR?: number | null
     strategyBrief?: string | null
+    liveGBP?: {
+      name?: string | null
+      rating?: number | null
+      reviewCount?: number | null
+      photoCount?: number | null
+      primaryCategory?: string | null
+      categories?: string[] | null
+      fetchedAt?: string | null
+    } | null
   }
   intelligenceContext: string
   userInput?: string
+}
+
+function liveGbpBlock(snapshot: BuildArgs['client']['liveGBP']) {
+  if (!snapshot) return ''
+  return `\n<LIVE_GBP>\n- Name: ${snapshot.name ?? 'unknown'}\n- Primary category: ${snapshot.primaryCategory ?? 'unknown'}\n- Categories: ${(snapshot.categories ?? []).join(', ') || 'unknown'}\n- Rating: ${snapshot.rating ?? 'unknown'}\n- Review count: ${snapshot.reviewCount ?? 0}\n- Photo count: ${snapshot.photoCount ?? 0}\n- Fetched at: ${snapshot.fetchedAt ?? 'unknown'}\n</LIVE_GBP>`
 }
 
 function clientHeader(c: BuildArgs['client'], intelligenceContext: string): string {
@@ -59,8 +85,10 @@ function clientHeader(c: BuildArgs['client'], intelligenceContext: string): stri
 - Tier: ${c.tier ?? 'LAUNCH_PAD'} (${c.monthlyMRR ?? 0}/mo MRR)
 - Strategy brief: ${c.strategyBrief || 'none yet'}
 
+<INTELLIGENCE>
 LegacyAI knowledge-base context (top matches):
-${intelligenceContext || '[no indexed insights matched — proceed using best practice]'}
+${intelligenceContext || '[no indexed insights matched — proceed using best practice]'}${liveGbpBlock(c.liveGBP)}
+</INTELLIGENCE>
 `
 }
 
@@ -73,6 +101,15 @@ export function buildAgencyPrompt(type: AgencyToolType, args: BuildArgs): { syst
   let user = head
   let intelQuery = `${c.industry} local SEO ${loc}`
 
+
+  if (type.startsWith('OSS_')) {
+    const installedTool = OPEN_SOURCE_MARKETING_TOOLS.find((tool) => openSourceAgencyToolType(tool) === type)
+    if (!installedTool) throw new Error(`Unknown installed open-source tool: ${type}`)
+    intelQuery = `${installedTool.name} ${c.industry} ${loc} ${userInput}`
+    system += `\n\nYou are running an installed LegacyLegion open-source marketing tool. Use the local archived source as reference material, but do not call upstream services, do not report telemetry upstream, and do not claim live execution unless the user supplied verified live data. Produce a concrete client work order with sections: ## Tool Objective, ## Inputs Used, ## Source-Backed Method, ## Client Output, ## Ryan Sales Actions, ## Douglas Ops Actions, ## Approval / Safety Gates, ### Next Steps.`
+    user += `\nInstalled tool: ${installedTool.name}\nSource repo: ${installedTool.sourceRepo}\nLocal archive path: ${installedTool.localSourcePath}\nWorkflow: ${installedTool.workflow}\nIntegration mode: ${installedTool.integrationMode}\nLegacyLegion use: ${installedTool.platformUse}\nSafety note: ${installedTool.riskNote}\nUser input: ${userInput || '[none supplied — infer a useful first run from the client snapshot]'}\n\nRun this installed tool now as a LegacyLegion work order.`
+    return { system, user, intelQuery }
+  }
   switch (type) {
     case 'SEO_AUDIT':
       intelQuery = `${c.industry} local SEO audit ${loc} ranking factors`

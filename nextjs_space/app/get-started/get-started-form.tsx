@@ -11,6 +11,9 @@ import { INDUSTRIES, REVENUE_RANGES, MARKETING_SPEND, EMPLOYEE_COUNT } from '@/l
 import { toast } from 'sonner'
 import { Loader2, CheckCircle2, Sparkles } from 'lucide-react'
 
+type RequiredAuditField = 'businessName' | 'ownerName' | 'email'
+type AuditFormErrors = Partial<Record<RequiredAuditField | 'form', string>>
+
 export function GetStartedForm() {
   const sp = useSearchParams()
   const initialIndustry = sp?.get('industry') ?? 'HVAC'
@@ -19,6 +22,7 @@ export function GetStartedForm() {
   const [aiAssessment, setAiAssessment] = useState<string>('')
   const [score, setScore] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<AuditFormErrors>({})
   const [form, setForm] = useState({
     businessName: '', ownerName: '', email: '', phone: '',
     industry: initialIndustry, city: 'Indianapolis', state: 'IN',
@@ -26,10 +30,34 @@ export function GetStartedForm() {
     employeeCount: '5-15', biggestPainPoint: '', currentProvider: '', website: '',
   })
 
-  function up(k: string, v: string) { setForm((f) => ({ ...f, [k]: v })) }
+  function clearError(field: RequiredAuditField | 'form') {
+    setErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  }
+
+  function up(k: string, v: string) {
+    setForm((f) => ({ ...f, [k]: v }))
+    if (k === 'businessName' || k === 'ownerName' || k === 'email') clearError(k)
+    clearError('form')
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setErrors({})
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const nextErrors: AuditFormErrors = {}
+    if (!form.businessName.trim()) nextErrors.businessName = 'Business name is required.'
+    if (!form.ownerName.trim()) nextErrors.ownerName = 'Your name is required.'
+    if (!form.email.trim()) nextErrors.email = 'Email is required.'
+    else if (!emailPattern.test(form.email.trim())) nextErrors.email = 'Enter a valid email address.'
+    if (Object.keys(nextErrors).length) {
+      setErrors(nextErrors)
+      return
+    }
     setLoading(true)
     setAiAssessment('')
     try {
@@ -40,6 +68,7 @@ export function GetStartedForm() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        setErrors({ form: data?.error ?? 'Submission failed' })
         toast.error(data?.error ?? 'Submission failed')
         setLoading(false)
         return
@@ -50,6 +79,7 @@ export function GetStartedForm() {
       // Stream the AI assessment
       streamAssessment(data?.leadId)
     } catch (err: any) {
+      setErrors({ form: 'Submission failed' })
       toast.error('Submission failed')
       setLoading(false)
     }
@@ -131,58 +161,71 @@ export function GetStartedForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3">
+    <form onSubmit={onSubmit} noValidate className="space-y-3">
+      {errors.form ? <p id="audit-form-error" role="alert" className="text-xs text-destructive">{errors.form}</p> : null}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Business name *</Label><Input required value={form.businessName} onChange={(e) => up('businessName', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Your name *</Label><Input required value={form.ownerName} onChange={(e) => up('ownerName', e.target.value)} /></div>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-business-name">Business name *</Label>
+          <Input id="audit-business-name" required value={form.businessName} aria-invalid={Boolean(errors.businessName)} aria-describedby={errors.businessName ? 'audit-business-name-error' : undefined} onChange={(e) => up('businessName', e.target.value)} />
+          {errors.businessName ? <p id="audit-business-name-error" role="alert" className="text-xs text-destructive">{errors.businessName}</p> : null}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-owner-name">Your name *</Label>
+          <Input id="audit-owner-name" required value={form.ownerName} aria-invalid={Boolean(errors.ownerName)} aria-describedby={errors.ownerName ? 'audit-owner-name-error' : undefined} onChange={(e) => up('ownerName', e.target.value)} />
+          {errors.ownerName ? <p id="audit-owner-name-error" role="alert" className="text-xs text-destructive">{errors.ownerName}</p> : null}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Email *</Label><Input type="email" required value={form.email} onChange={(e) => up('email', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={(e) => up('phone', e.target.value)} /></div>
+        <div className="space-y-1.5">
+          <Label htmlFor="audit-email">Email *</Label>
+          <Input id="audit-email" type="email" required value={form.email} aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? 'audit-email-error' : undefined} onInvalid={() => setErrors((current) => ({ ...current, email: 'Enter a valid email address.' }))} onChange={(e) => up('email', e.target.value)} />
+          {errors.email ? <p id="audit-email-error" role="alert" className="text-xs text-destructive">{errors.email}</p> : null}
+        </div>
+        <div className="space-y-1.5"><Label htmlFor="audit-phone">Phone</Label><Input id="audit-phone" value={form.phone} onChange={(e) => up('phone', e.target.value)} /></div>
       </div>
       <div className="space-y-1.5">
-        <Label>Industry *</Label>
+        <Label htmlFor="audit-industry">Industry *</Label>
         <Select value={form.industry} onValueChange={(v) => up('industry', v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger id="audit-industry" aria-label="Industry"><SelectValue /></SelectTrigger>
           <SelectContent>
             {INDUSTRIES.map((i) => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={(e) => up('city', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>State</Label><Input value={form.state} onChange={(e) => up('state', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Website</Label><Input value={form.website} onChange={(e) => up('website', e.target.value)} placeholder="example.com" /></div>
+        <div className="space-y-1.5"><Label htmlFor="audit-city">City</Label><Input id="audit-city" value={form.city} onChange={(e) => up('city', e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="audit-state">State</Label><Input id="audit-state" value={form.state} onChange={(e) => up('state', e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="audit-website">Website</Label><Input id="audit-website" value={form.website} onChange={(e) => up('website', e.target.value)} placeholder="example.com" /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Revenue range</Label>
+          <Label htmlFor="audit-revenue-range">Revenue range</Label>
           <Select value={form.revenueRange} onValueChange={(v) => up('revenueRange', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="audit-revenue-range" aria-label="Revenue range"><SelectValue /></SelectTrigger>
             <SelectContent>{REVENUE_RANGES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Marketing spend</Label>
+          <Label htmlFor="audit-marketing-spend">Marketing spend</Label>
           <Select value={form.currentMarketingSpend} onValueChange={(v) => up('currentMarketingSpend', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="audit-marketing-spend" aria-label="Marketing spend"><SelectValue /></SelectTrigger>
             <SelectContent>{MARKETING_SPEND.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Team size</Label>
+          <Label htmlFor="audit-team-size">Team size</Label>
           <Select value={form.employeeCount} onValueChange={(v) => up('employeeCount', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="audit-team-size" aria-label="Team size"><SelectValue /></SelectTrigger>
             <SelectContent>{EMPLOYEE_COUNT.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>Current marketing provider</Label><Input value={form.currentProvider} onChange={(e) => up('currentProvider', e.target.value)} placeholder="None / Scorpion / Thrive…" /></div>
+        <div className="space-y-1.5"><Label htmlFor="audit-current-provider">Current marketing provider</Label><Input id="audit-current-provider" value={form.currentProvider} onChange={(e) => up('currentProvider', e.target.value)} placeholder="None / Scorpion / Thrive…" /></div>
       </div>
       <div className="space-y-1.5">
-        <Label>Biggest growth pain point</Label>
-        <Textarea rows={3} value={form.biggestPainPoint} onChange={(e) => up('biggestPainPoint', e.target.value)} placeholder="e.g. lead quality, slow speed-to-contact, low Google ranking…" />
+        <Label htmlFor="audit-pain-point">Biggest growth pain point</Label>
+        <Textarea id="audit-pain-point" rows={3} value={form.biggestPainPoint} onChange={(e) => up('biggestPainPoint', e.target.value)} placeholder="e.g. lead quality, slow speed-to-contact, low Google ranking…" />
       </div>
       <Button type="submit" className="w-full" disabled={loading} size="lg">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Get my AI assessment'}

@@ -1,7 +1,6 @@
 generator client {
     provider = "prisma-client-js"
     binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/legacy_legion/nextjs_space/node_modules/.prisma/client"
 }
 
 datasource db {
@@ -30,6 +29,7 @@ model User {
   referralPartner ReferralPartner?
   clientNotes     ClientNote[]
   workOrders      ClientWorkOrder[] @relation("WorkAuthor")
+  agentThreads   AgentThread[] @relation("UserAgentThreads")
 }
 
 model Account {
@@ -267,7 +267,10 @@ model Client {
 
   workOrders      ClientWorkOrder[]
   clientNotes     ClientNote[]
+  agentThreads   AgentThread[]
 
+  prospects       Prospect[]
+  intelligence    ClientIntelligence?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -313,4 +316,104 @@ model ClientNote {
   createdAt DateTime @default(now())
 
   @@index([clientId])
+}
+
+model AgentThread {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation("UserAgentThreads", fields: [userId], references: [id], onDelete: Cascade)
+  persona      String
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  title        String?
+  archivedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  turns        AgentTurn[]
+
+  @@index([userId, persona])
+  @@index([clientId])
+}
+
+model AgentTurn {
+  id            String      @id @default(cuid())
+  threadId      String
+  thread        AgentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role          String
+  content       String      @db.Text
+  toolName      String?
+  toolCallsJson Json?
+  modelUsed     String?
+  tokenUsage    Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([threadId, createdAt])
+}
+
+model Prospect {
+  id                   String   @id @default(cuid())
+  source               String
+  sourceId             String
+  clientId             String?
+  client               Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  companyName          String?
+  companyDomain        String?
+  companyIndustry      String?
+  companyEmployeeCount Int?
+  companyRevenue       Int?
+
+  personFirstName      String?
+  personLastName       String?
+  personTitle          String?
+  personEmail          String?
+  personPhone          String?
+  personLinkedinUrl    String?
+
+  city                 String?
+  state                String?
+  country              String?
+
+  enrichedJson         Json?
+  promotedToLeadId     String?  @unique
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([source, sourceId])
+  @@index([clientId])
+  @@index([personEmail])
+  @@index([companyDomain])
+}
+
+model LeadGenCampaign {
+  id             String   @id @default(cuid())
+  ownerId        String
+  clientId       String?
+  name           String
+  source         String
+  criteriaJson   Json
+  status         String   @default("ACTIVE")
+  totalFound     Int      @default(0)
+  totalPersisted Int      @default(0)
+  lastRunAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([clientId])
+}
+
+
+model ClientIntelligence {
+  id              String   @id @default(cuid())
+  clientId        String   @unique
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  gbpSnapshotJson Json?
+  gscSummaryJson  Json?
+  fetchedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fetchedAt])
 }

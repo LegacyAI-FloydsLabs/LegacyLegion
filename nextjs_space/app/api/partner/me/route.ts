@@ -15,8 +15,8 @@ export async function GET(_req: NextRequest) {
   }));
   const stats = {
     total: submissions.length,
-    converted: submissions.filter((s) => s.status === 'WON').length,
-    pending: submissions.filter((s) => s.status !== 'WON' && s.status !== 'LOST').length,
+    converted: submissions.filter((s: any) => s.status === 'WON').length,
+    pending: submissions.filter((s: any) => s.status !== 'WON' && s.status !== 'LOST').length,
   };
   return NextResponse.json({
     partner: { id: partner.id, tier: partner.tier, referralCode: partner.partnerCode, lifetimeCommission: Number(partner.lifetimeCommission ?? 0), company: partner.company },

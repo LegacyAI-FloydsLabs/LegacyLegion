@@ -94,7 +94,7 @@ export function Pipeline({ leads: initial }: { leads: LeadCard[] }) {
               </div>
               <div className="p-2 space-y-2 min-h-[400px]">
                 {items.map((l) => (
-                  <Link key={l.id} href={`/app/leads/${l.id}`}>
+                  <Link key={l.id} href={`/app/leads/${l.id}`} aria-label={`Open lead ${l.businessName}`}>
                     <Card
                       draggable
                       onDragStart={(e) => { e.dataTransfer.setData('text/plain', l.id); setDragId(l.id) }}

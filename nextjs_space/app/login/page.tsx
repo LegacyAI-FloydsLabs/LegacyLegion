@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <main className="min-h-screen flex flex-col">
       <div className="flex justify-center pt-8">
         <Link href="/"><Logo size="lg" /></Link>
       </div>
@@ -24,6 +24,6 @@ export default function LoginPage() {
           </div>
         </AuthLayout>
       </div>
-    </div>
+    </main>
   )
 }

@@ -47,23 +47,23 @@ export function PartnerSignupForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Full name</Label><Input required value={form.name} onChange={(e) => up('name', e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>Company</Label><Input value={form.company} onChange={(e) => up('company', e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="partner-full-name">Full name</Label><Input id="partner-full-name" required value={form.name} onChange={(e) => up('name', e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="partner-company">Company</Label><Input id="partner-company" value={form.company} onChange={(e) => up('company', e.target.value)} /></div>
       </div>
-      <div className="space-y-1.5"><Label>Email</Label><Input type="email" required value={form.email} onChange={(e) => up('email', e.target.value)} /></div>
+      <div className="space-y-1.5"><Label htmlFor="partner-email">Email</Label><Input id="partner-email" type="email" required value={form.email} onChange={(e) => up('email', e.target.value)} /></div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={(e) => up('phone', e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="partner-phone">Phone</Label><Input id="partner-phone" value={form.phone} onChange={(e) => up('phone', e.target.value)} /></div>
         <div className="space-y-1.5">
-          <Label>Category</Label>
+          <Label htmlFor="partner-category">Category</Label>
           <Select value={form.category} onValueChange={(v) => up('category', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="partner-category" aria-label="Category"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PARTNER_CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
-      <div className="space-y-1.5"><Label>Password</Label><Input type="password" required minLength={6} value={form.password} onChange={(e) => up('password', e.target.value)} /></div>
+      <div className="space-y-1.5"><Label htmlFor="partner-password">Password</Label><Input id="partner-password" type="password" required minLength={6} value={form.password} onChange={(e) => up('password', e.target.value)} /></div>
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
       </Button>

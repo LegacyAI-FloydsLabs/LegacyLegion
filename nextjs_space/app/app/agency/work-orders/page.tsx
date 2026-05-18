@@ -14,7 +14,7 @@ export default async function WorkOrdersPage() {
   })
   return (
     <WorkOrdersList
-      items={items.map(i => ({
+      items={items.map((i: any) => ({
         id: i.id,
         type: i.type,
         title: i.title,
