@@ -8,6 +8,7 @@ build/
 .env*.local
 *.log
 .DS_Store
+Restore_Renew_Onboarding_Intake.pdf
 .cache/
 .turbo/
 tsconfig.tsbuildinfo
