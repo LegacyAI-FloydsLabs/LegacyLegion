@@ -4,26 +4,39 @@ import { WorkOrdersList } from './_list'
 export const dynamic = 'force-dynamic'
 
 export default async function WorkOrdersPage() {
-  const items = await prisma.clientWorkOrder.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-    include: {
-      client: { select: { id: true, businessName: true, industry: true } },
-      author: { select: { name: true, email: true } },
-    },
-  })
+  const [items, clients] = await Promise.all([
+    prisma.clientWorkOrder.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: {
+        client: { select: { id: true, businessName: true, industry: true } },
+        author: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.client.findMany({
+      orderBy: { businessName: 'asc' },
+      select: { id: true, businessName: true, industry: true },
+    }),
+  ])
+
   return (
     <WorkOrdersList
-      items={items.map((i: any) => ({
-        id: i.id,
-        type: i.type,
-        title: i.title,
-        status: i.status,
-        createdAt: i.createdAt.toISOString(),
-        generatedAt: i.generatedAt?.toISOString() ?? null,
-        deliveredAt: i.deliveredAt?.toISOString() ?? null,
-        client: i.client,
-        author: i.author ? { name: i.author.name, email: i.author.email } : null,
+      clients={clients}
+      items={items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        status: item.status,
+        priority: item.priority,
+        ownerKind: item.ownerKind,
+        ownerLabel: item.ownerLabel,
+        approvalStatus: item.approvalStatus,
+        dueAt: item.dueAt?.toISOString() ?? null,
+        createdAt: item.createdAt.toISOString(),
+        generatedAt: item.generatedAt?.toISOString() ?? null,
+        deliveredAt: item.deliveredAt?.toISOString() ?? null,
+        client: item.client,
+        author: item.author ? { name: item.author.name, email: item.author.email } : null,
       }))}
     />
   )

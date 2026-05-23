@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireInternalUser } from '@/lib/authz';
 import { prisma } from '@/lib/db';
+import { diagnosticId, logServerError, logServerEvent } from '@/lib/diagnostics';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,10 +65,13 @@ export async function POST(req: NextRequest) {
           },
         });
         created++;
-      } catch (e: any) { errors.push(`Row ${i + 2}: ${e?.message ?? 'failed'}`); }
+      } catch { errors.push(`Row ${i + 2}: failed to save`); }
     }
+    logServerEvent('lead.import.succeeded', { userId: auth.userId, total: rows.length, created, skipped, errorCount: errors.length });
     return NextResponse.json({ total: rows.length, created, skipped, errors });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message ?? 'Import failed' }, { status: 500 });
+    const id = diagnosticId('lead_import');
+    logServerError('lead.import.failed', e, { diagnosticId: id });
+    return NextResponse.json({ error: 'Import failed. No raw CSV content was logged; fix the file and retry.', diagnosticId: id }, { status: 500 });
   }
 }

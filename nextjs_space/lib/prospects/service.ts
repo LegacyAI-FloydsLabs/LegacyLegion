@@ -243,10 +243,24 @@ export async function searchProspects(input: ProspectSearchInput) {
     })
   }
 
+  const persisted = deduped.persistable.length
+    ? await prisma.prospect.findMany({
+      where: {
+        OR: deduped.persistable.map((candidate) => ({
+          source: candidate.source,
+          sourceId: candidate.sourceId,
+        })),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: deduped.persistable.length,
+    })
+    : []
+
   return {
     source,
     criteria,
     counts: { found: candidates.length, deduped: deduped.skipped.length, persisted: deduped.persistable.length },
+    prospects: persisted,
     skipped: deduped.skipped.map((item) => ({ reason: item.reason, sourceId: item.candidate.sourceId })),
   }
 }
@@ -255,7 +269,7 @@ export async function promoteProspectToLead(input: ProspectPromoteInput) {
   const prospect = await prisma.prospect.findUnique({ where: { id: input.prospectId } })
   if (!prospect) throw new ProspectSearchError('PROSPECT_NOT_FOUND', 'Prospect not found.', 404)
   if ((prospect as any).promotedToLeadId) return { leadId: (prospect as any).promotedToLeadId, alreadyPromoted: true }
-  if (!prospect.personEmail) throw new ProspectSearchError('PROSPECT_EMAIL_REQUIRED', 'Prospect must have an email before promotion.', 400)
+  if (!prospect.personEmail && !prospect.personPhone) throw new ProspectSearchError('PROSPECT_CONTACT_REQUIRED', 'Prospect must have an email or phone before promotion.', 400)
 
   const ownerName = [prospect.personFirstName, prospect.personLastName].filter(Boolean).join(' ') || 'Unknown Owner'
   const lead = await prisma.lead.create({

@@ -7,8 +7,11 @@ import { prisma } from '@/lib/db'
 import { dispatchTool, type ToolName } from '@/lib/agents/dispatcher'
 import { getPersona, type AgentPersona } from '@/lib/agents/registry'
 import { formatMemoryBlock, recallMemory, recordTurn } from '@/lib/agents/memory'
+import { getLLMProvider, type LLMProviderId } from '@/lib/llm-providers'
 
+import { diagnosticId, logServerError, logServerEvent } from '@/lib/diagnostics'
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
+const CHAT_STREAM_TIMEOUT_MS = 60_000
 
 function toolsBlock(allowedTools: AgentPersona['allowedTools']): string {
   const tools = allowedTools === 'all'
@@ -44,9 +47,30 @@ function parseToolCall(text: string): { name: ToolName; args: Record<string, any
 
 async function clientContext(clientId?: string): Promise<string> {
   if (!clientId) return ''
-  const client = await prisma.client.findUnique({ where: { id: clientId } })
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: {
+      workOrders: {
+        where: { status: { in: ['DRAFT', 'IN_PROGRESS', 'REVIEW'] } },
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        select: { title: true, type: true, status: true, approvalStatus: true },
+      },
+      accessRequests: {
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        select: { platform: true, status: true, resourceUrl: true },
+      },
+    },
+  })
   if (!client) return ''
-  return `<CLIENT_CONTEXT>\nClient: ${client.businessName} (${client.industry}, ${client.city ?? 'Indianapolis'} ${client.state ?? 'IN'})\nTier: ${client.tier} • MRR: $${client.monthlyMRR}\nStatus: ${client.status}\nStrategy brief: ${client.strategyBrief || 'none'}\n</CLIENT_CONTEXT>`
+  const workOrders = client.workOrders.length
+    ? client.workOrders.map((item) => `- ${item.title} (${item.type}, ${item.status}, ${item.approvalStatus})`).join('\n')
+    : '- None active.'
+  const access = client.accessRequests.length
+    ? client.accessRequests.map((item) => `- ${item.platform}: ${item.status}${item.resourceUrl ? ` (${item.resourceUrl})` : ''}`).join('\n')
+    : '- No access requests recorded.'
+  return `<CLIENT_CONTEXT>\nClient: ${client.businessName} (${client.industry}, ${client.city ?? 'Indianapolis'} ${client.state ?? 'IN'})\nWebsite: ${client.website ?? 'not provided'}\nGoogle Business Profile: ${client.gbpUrl ?? 'not provided'}\nTier: ${client.tier} • MRR: $${client.monthlyMRR}\nStatus: ${client.status}\nStrategy brief: ${client.strategyBrief || 'none'}\nActive work orders:\n${workOrders}\nAccount access status:\n${access}\nRules: Do not claim account access, website edits, GBP edits, social publishing, outreach, or spend unless the access status and work-order approval explicitly support it. Mark unsupported claims as assumptions.\n</CLIENT_CONTEXT>`
 }
 
 
@@ -65,11 +89,15 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
   }
 
   const apiKey = process.env.ABACUSAI_API_KEY
-  if (!apiKey) return new Response('Service unavailable', { status: 503 })
+  if (!apiKey) {
+    logServerEvent('ai.call.not_configured', { userId, persona: persona.id, clientId })
+    return new Response('Service unavailable', { status: 503 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const message = String(body?.message ?? '').trim()
   if (!message) return new Response('Empty message', { status: 400 })
+  const provider = getLLMProvider((body?.provider as LLMProviderId) || 'auto')
 
   const { thread, turn } = await recordTurn({
     userId,
@@ -81,6 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
   })
 
   const recalled = await recallMemory({ userId, persona: persona.id, clientId, query: message, topK: 5 })
+  logServerEvent('ai.call.requested', { userId, persona: persona.id, clientId, threadId: thread.id })
   const system = [
     persona.systemPrompt,
     `<BRAND_RULES>\n${BRAND_RULES}\n</BRAND_RULES>`,
@@ -94,18 +123,26 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
     { role: 'user', content: message },
   ]
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), CHAT_STREAM_TIMEOUT_MS)
   const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: 'route-llm',
+      model: provider.modelId,
       messages,
       stream: true,
       metadata: { persona: persona.id, clientId, hint: persona.modelHint },
     }),
-  })
+    signal: controller.signal,
+  }).catch(() => null)
 
-  if (!upstream.ok || !upstream.body) return new Response('Generation service unavailable', { status: 502 })
+  if (!upstream?.ok || !upstream.body) {
+    clearTimeout(timeout)
+    const id = diagnosticId('ai_call')
+    logServerError('ai.call.failed', new Error(`upstream status ${upstream?.status ?? 'no_response'}`), { diagnosticId: id, userId, persona: persona.id, clientId })
+    return new Response(`Generation service unavailable (${id})`, { status: 502 })
+  }
 
   const ts = new TransformStream()
   const writer = ts.writable.getWriter()
@@ -140,7 +177,8 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
       }
 
       if (assistantBuffer.trim()) {
-        await recordTurn({ userId, persona: persona.id, clientId, threadId: thread.id, role: 'assistant', content: assistantBuffer.trim(), modelUsed: 'route-llm' })
+        await recordTurn({ userId, persona: persona.id, clientId, threadId: thread.id, role: 'assistant', content: assistantBuffer.trim(), modelUsed: provider.modelId })
+        logServerEvent('ai.call.completed', { userId, persona: persona.id, clientId, threadId: thread.id })
         const toolCall = parseToolCall(assistantBuffer)
         if (toolCall) {
           const toolResult = await dispatchTool(toolCall.name, toolCall.args, { userId, clientId, threadId: thread.id })
@@ -159,8 +197,10 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'))
     } catch (error) {
-      console.error('agent chat stream error', error)
+      logServerError('ai.call.stream_failed', error, { userId, persona: persona.id, clientId, threadId: thread.id })
     } finally {
+      clearTimeout(timeout)
+      try { await reader.cancel() } catch { /* upstream already closed */ }
       try { await writer.close() } catch { /* noop */ }
     }
   })()

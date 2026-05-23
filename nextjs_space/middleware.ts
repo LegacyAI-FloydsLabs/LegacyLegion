@@ -48,6 +48,7 @@ const TEAM_ONLY_INTERNAL_API_PATHS = new Set([
 const PUBLIC_API_PATHS = new Set([
   '/api/agency/digest/daily',
   '/api/agency/intelligence/refresh-all',
+  '/api/health',
 ])
 
 const SELF_SERVICE_PUBLIC_API_PATHS = new Set([
@@ -93,8 +94,9 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (isTeamOnlyHiddenPage(pathname)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
     const url = req.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = token ? '/app' : '/login'
     url.search = ''
     return NextResponse.redirect(url)
   }

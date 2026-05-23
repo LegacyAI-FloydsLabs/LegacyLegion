@@ -33,9 +33,15 @@ const AGENCY_NAV = [
   { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
   { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
   { href: '/app/agency/prospects', label: 'Prospects', icon: FileSearch },
-  { href: '/app/intelligence', label: 'Intelligence', icon: Sparkles },
+  { href: '/app/agency/intelligence', label: 'Intelligence', icon: Sparkles },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
 ]
+
+function visibleNavItems(mode: WorkspaceMode, role: string) {
+  const nav = mode === 'agency' ? AGENCY_NAV : SALES_NAV
+  if (role === 'superadmin') return nav
+  return nav.filter((item) => item.href !== '/app/agent')
+}
 
 export function TeamShell({
   children, user,
@@ -53,7 +59,7 @@ export function TeamShell({
     if (pathname.startsWith('/app/agency') && mode !== 'agency') setMode('agency')
   }, [pathname, mode, setMode])
 
-  const NAV = mode === 'agency' ? AGENCY_NAV : SALES_NAV
+  const NAV = visibleNavItems(mode, user.role)
   const switchMode = (next: WorkspaceMode) => {
     setMode(next)
     if (next === 'agency' && !pathname.startsWith('/app/agency')) router.push('/app/agency')

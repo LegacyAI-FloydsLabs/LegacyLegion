@@ -116,12 +116,22 @@ export function AgencyToolPanel({ client, onWorkOrderCreated, onOpenWorkOrder }:
           type: active.type,
           title: `${active.label} — ${client.businessName}`,
           status: 'REVIEW',
+          approvalStatus: 'PENDING',
+          priority: 'MEDIUM',
+          ownerKind: 'AI_PERSONA',
+          ownerLabel: null,
+          dueAt: null,
           outputMarkdown: buffer,
+          internalNotes: null,
+          clientSummary: null,
+          evidenceLinks: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           generatedAt: new Date().toISOString(),
           deliveredAt: null,
+          approvedAt: null,
           inputJson: { userInput: input },
+          events: [],
         }
         onWorkOrderCreated(wo)
         onOpenWorkOrder(wo)
@@ -147,8 +157,9 @@ export function AgencyToolPanel({ client, onWorkOrderCreated, onOpenWorkOrder }:
         <p className="text-sm text-muted-foreground mb-4">{active.description}</p>
         {active.needsInput && (
           <div className="mb-4">
-            <Label className="text-xs">{active.needsInput}</Label>
+            <Label htmlFor="agency-tool-input" className="text-xs">{active.needsInput}</Label>
             <Input
+              id="agency-tool-input"
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder={active.needsInput}

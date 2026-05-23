@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Container } from '@/components/layouts/container'
 import { PageHeader } from '@/components/layouts/page-header'
 import { Card } from '@/components/ui/card'
+import type { Prisma } from '@prisma/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -14,22 +15,42 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, KeyRound, Sparkles, Trash2, ExternalLink, Download } from 'lucide-react'
+import { ArrowLeft, Wrench, FileText, StickyNote, Edit3, KeyRound, Sparkles, Trash2, ExternalLink, Download, Copy } from 'lucide-react'
 import { AgencyToolPanel } from './agency-tool-panel'
 import { ClientAccessPanel, type ClientAccessRequest } from './client-access-panel'
 import { WorkOrderViewer } from './work-order-viewer'
+
+interface WorkOrderEvent {
+  id: string
+  type: string
+  fromStatus: string | null
+  toStatus: string | null
+  notes: string | null
+  createdAt: string
+  actor?: { name: string | null; email: string | null } | null
+}
 
 interface WorkOrder {
   id: string
   type: string
   title: string
   status: string
+  approvalStatus: string
+  priority: string
+  ownerKind: string
+  ownerLabel: string | null
+  dueAt: string | null
   outputMarkdown: string | null
+  internalNotes: string | null
+  clientSummary: string | null
+  evidenceLinks: string[]
   createdAt: string
   updatedAt: string
   generatedAt: string | null
   deliveredAt: string | null
-  inputJson: any
+  approvedAt: string | null
+  inputJson: Prisma.JsonValue
+  events?: WorkOrderEvent[]
 }
 
 interface ClientNote {
@@ -56,8 +77,8 @@ interface Prospect {
 }
 
 interface ClientIntelligence {
-  gbpSnapshotJson: any | null
-  gscSummaryJson: any | null
+  gbpSnapshotJson: Prisma.JsonValue | null
+  gscSummaryJson: Prisma.JsonValue | null
   fetchedAt: string
 }
 
@@ -98,10 +119,15 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
   const [busyIntelligence, setBusyIntelligence] = useState(false)
   const [busyExport, setBusyExport] = useState<string | null>(null)
 
+
+  type ExportKind = 'md' | 'json' | 'pdf' | 'weekly-internal' | 'weekly-client'
+
   const orders = optimisticOrders
   const inProgress = orders.filter(o => o.status === 'IN_PROGRESS' || o.status === 'REVIEW').length
   const delivered = orders.filter(o => o.status === 'DELIVERED').length
 
+
+  const isSuperAdmin = currentUserRole === 'superadmin'
   function tierBadge(t: string) {
     if (t === 'MARKET_DOMINATOR') return 'bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30'
     if (t === 'GROWTH_ENGINE') return 'bg-violet-500/15 text-violet-300 border-violet-500/30'
@@ -166,14 +192,21 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
     }
   }
 
-  async function exportSnapshot(format: 'md' | 'json' | 'pdf') {
-    setBusyExport(format)
+  function exportPath(kind: ExportKind) {
+    if (kind === 'weekly-internal') return `/api/agency/clients/${client.id}/export?format=md&report=weekly-internal`
+    if (kind === 'weekly-client') return `/api/agency/clients/${client.id}/export?format=md&report=weekly-client`
+    return `/api/agency/clients/${client.id}/export?format=${kind}`
+  }
+
+  async function exportSnapshot(kind: ExportKind) {
+    setBusyExport(kind)
     try {
-      const res = await fetch(`/api/agency/clients/${client.id}/export?format=${format}`, { method: 'POST' })
+      const res = await fetch(exportPath(kind), { method: 'POST' })
       if (!res.ok) throw new Error(await res.text())
       const blob = await res.blob()
       const disposition = res.headers.get('Content-Disposition') ?? ''
-      const fallback = `${client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client'}-snapshot.${format}`
+      const extension = kind === 'json' ? 'json' : kind === 'pdf' ? 'pdf' : 'md'
+      const fallback = `${client.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client'}-${kind}.${extension}`
       const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? fallback
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -183,9 +216,23 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(url)
-      toast.success(`Exported ${format.toUpperCase()} snapshot`)
+      toast.success(`Exported ${kind.replace(/-/g, ' ')}`)
     } catch {
-      toast.error('Could not export client snapshot')
+      toast.error('Could not export client file')
+    } finally {
+      setBusyExport(null)
+    }
+  }
+
+  async function copyWeeklyReport(kind: 'weekly-internal' | 'weekly-client') {
+    setBusyExport(`copy-${kind}`)
+    try {
+      const res = await fetch(exportPath(kind), { method: 'POST' })
+      if (!res.ok) throw new Error(await res.text())
+      await navigator.clipboard.writeText(await res.text())
+      toast.success(kind === 'weekly-internal' ? 'Copied internal weekly report' : 'Copied client-facing weekly report')
+    } catch {
+      toast.error('Could not copy weekly report')
     } finally {
       setBusyExport(null)
     }
@@ -205,15 +252,19 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
             <Badge variant="outline">${client.monthlyMRR}/mo</Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" disabled={Boolean(busyExport)}><Download className="mr-2 h-4 w-4" />{busyExport ? 'Exporting…' : 'Export'}</Button>
+                <Button variant="outline" size="sm" disabled={Boolean(busyExport)}><Download className="mr-2 h-4 w-4" />{busyExport ? 'Working…' : 'Export'}</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => exportSnapshot('md')}>Markdown snapshot</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportSnapshot('json')}>JSON snapshot</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportSnapshot('pdf')}>PDF snapshot</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('weekly-internal')}>Markdown internal weekly report</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportSnapshot('weekly-client')}>Markdown client weekly report</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => copyWeeklyReport('weekly-internal')}><Copy className="mr-2 h-3.5 w-3.5" />Copy internal weekly report</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => copyWeeklyReport('weekly-client')}><Copy className="mr-2 h-3.5 w-3.5" />Copy client weekly report</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="sm" onClick={deleteClient} aria-label={`Delete ${client.businessName}`} title={`Delete ${client.businessName}`}><Trash2 className="h-4 w-4 text-rose-400"/></Button>
+            {isSuperAdmin && <Button variant="ghost" size="sm" onClick={deleteClient} aria-label={`Delete ${client.businessName}`} title={`Delete ${client.businessName}`}><Trash2 className="h-4 w-4 text-rose-400"/></Button>}
           </>
         }
       />
@@ -291,14 +342,17 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
                     <div className="min-w-0">
                       <div className="text-xs uppercase tracking-wider text-muted-foreground">{wo.type.replace(/_/g,' ')}</div>
                       <div className="font-medium truncate mt-0.5">{wo.title}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{new Date(wo.createdAt).toLocaleString()}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{wo.ownerKind.replace(/_/g, ' ')} • {wo.priority} • {new Date(wo.createdAt).toLocaleString()}</div>
                     </div>
-                    <Badge variant="outline" className={
-                      wo.status === 'DELIVERED' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' :
-                      wo.status === 'REVIEW' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
-                      wo.status === 'IN_PROGRESS' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
-                      'bg-slate-500/15 text-slate-300 border-slate-500/30'
-                    }>{wo.status}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className={
+                        wo.status === 'DELIVERED' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' :
+                        wo.status === 'REVIEW' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
+                        wo.status === 'IN_PROGRESS' ? 'bg-blue-500/15 text-blue-300 border-blue-500/30' :
+                        'bg-slate-500/15 text-slate-300 border-slate-500/30'
+                      }>{wo.status}</Badge>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{wo.approvalStatus.replace(/_/g, ' ')}</span>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -355,6 +409,11 @@ export function ClientWorkspace({ client, currentUserRole }: { client: Client; c
   )
 }
 
+function jsonObject(value: Prisma.JsonValue | null): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
+}
+
+
 function IntelligencePanel({
   intelligence, hasGbpUrl, busy, onRefresh, onUploadGsc,
 }: {
@@ -364,8 +423,12 @@ function IntelligencePanel({
   onRefresh: () => void
   onUploadGsc: (file: File | null) => void
 }) {
-  const gbp = intelligence?.gbpSnapshotJson ?? null
-  const gsc = intelligence?.gscSummaryJson ?? null
+  const gbp = jsonObject(intelligence?.gbpSnapshotJson ?? null)
+  const gsc = jsonObject(intelligence?.gscSummaryJson ?? null)
+  const topMoversValue = gsc?.topMovers
+  const lostQueriesValue = gsc?.lostQueries
+  const topMovers = Array.isArray(topMoversValue) ? topMoversValue : []
+  const lostQueries = Array.isArray(lostQueriesValue) ? lostQueriesValue : []
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -381,7 +444,7 @@ function IntelligencePanel({
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard label="Reviews" value={String(gbp.reviewCount ?? 0)} />
             <MetricCard label="Photos" value={String(gbp.photoCount ?? 0)} />
-            <MetricCard label="Category" value={gbp.primaryCategory ?? '—'} />
+            <MetricCard label="Category" value={String(gbp.primaryCategory ?? '—')} />
             <MetricCard label="Rating" value={gbp.rating ? String(gbp.rating) : '—'} />
           </div>
         ) : (
@@ -395,7 +458,7 @@ function IntelligencePanel({
             <div className="font-medium">GSC CSV summary</div>
             <div className="text-sm text-muted-foreground">Upload Search Console exports with Date, Query, Clicks, Impressions, CTR, Position.</div>
           </div>
-          <Input type="file" accept=".csv,text/csv" disabled={busy} onChange={(event) => onUploadGsc(event.target.files?.[0] ?? null)} className="max-w-xs" />
+          <Input type="file" accept=".csv,text/csv" aria-label="Upload Google Search Console CSV export" disabled={busy} onChange={(event) => onUploadGsc(event.target.files?.[0] ?? null)} className="max-w-xs" />
         </div>
         {gsc ? (
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -404,8 +467,8 @@ function IntelligencePanel({
               <MetricCard label="Queries" value={String(gsc.queryCount ?? 0)} />
               <MetricCard label="Clicks" value={String(gsc.totalClicks ?? 0)} />
             </div>
-            <QueryDeltaList title="Top movers" rows={gsc.topMovers ?? []} empty="No improving queries found." />
-            <QueryDeltaList title="Lost queries" rows={gsc.lostQueries ?? []} empty="No declining queries found." />
+            <QueryDeltaList title="Top movers" rows={topMovers} empty="No improving queries found." />
+            <QueryDeltaList title="Lost queries" rows={lostQueries} empty="No declining queries found." />
           </div>
         ) : (
           <div className="mt-4 rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">No GSC export imported yet.</div>

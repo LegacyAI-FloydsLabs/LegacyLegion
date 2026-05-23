@@ -1,12 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireInternalUser } from '@/lib/authz'
+import { isSuperAdminRole, requireInternalUser } from '@/lib/authz'
 import {
   cleanOptionalString,
   findCredentialMaterialField,
+  isSuperadminAccessStatus,
   normalizeAccessPlatform,
   normalizeAccessStatus,
+  redactAccessRequestForRole,
 } from '@/lib/client-access'
 import { prisma } from '@/lib/db'
 
@@ -30,7 +32,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: ACCESS_INCLUDE,
   })
 
-  return NextResponse.json({ accessRequests })
+  const isSuperAdmin = isSuperAdminRole(auth.role)
+  return NextResponse.json({ accessRequests: accessRequests.map((request) => redactAccessRequestForRole(request, isSuperAdmin)) })
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -42,16 +45,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!platform) return NextResponse.json({ error: 'Valid platform required' }, { status: 400 })
 
   const status = normalizeAccessStatus(body?.status) ?? 'REQUESTED'
-  if (status === 'APPROVED' || status === 'REJECTED' || status === 'REVOKED') {
-    return NextResponse.json({ error: 'Decision status requires an existing access request' }, { status: 400 })
+  if (isSuperadminAccessStatus(status)) {
+    return NextResponse.json({ error: 'SUPERADMIN-only status requires an existing access request' }, { status: 400 })
   }
 
   const resourceUrl = cleanOptionalString(body?.resourceUrl)
   const externalVaultRef = cleanOptionalString(body?.externalVaultRef)
   const requestNotes = cleanOptionalString(body?.requestNotes, 2_000)
 
-  if (status === 'RECEIVED_IN_VAULT' && !externalVaultRef) {
-    return NextResponse.json({ error: 'externalVaultRef required when access is received in vault' }, { status: 400 })
+  if (externalVaultRef) {
+    return NextResponse.json({ error: 'External references are recorded by SUPERADMIN after access is received' }, { status: 403 })
   }
 
   const unsafeField = findCredentialMaterialField({ resourceUrl, externalVaultRef, requestNotes })
@@ -62,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const client = await prisma.client.findUnique({ where: { id: params.id }, select: { id: true } })
   if (!client) return NextResponse.json({ error: 'Client not found' }, { status: 404 })
 
-  const receivedAt = status === 'RECEIVED_IN_VAULT' ? new Date() : null
+  const receivedAt = status === 'ACCESS_RECEIVED' ? new Date() : null
   const accessRequest = await prisma.clientAccessRequest.create({
     data: {
       clientId: params.id,

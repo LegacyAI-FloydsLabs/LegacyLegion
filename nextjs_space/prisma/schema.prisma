@@ -34,6 +34,7 @@ model User {
   clientAccessRequests  ClientAccessRequest[] @relation("ClientAccessRequester")
   clientAccessApprovals ClientAccessRequest[] @relation("ClientAccessApprover")
   clientAccessEvents    ClientAccessEvent[]   @relation("ClientAccessEventActor")
+  workOrderEvents      ClientWorkOrderEvent[] @relation("WorkOrderEventActor")
 }
 
 model Account {
@@ -76,7 +77,7 @@ model Lead {
   id                    String  @id @default(cuid())
   businessName          String
   ownerName             String
-  email                 String
+  email                 String?
   phone                 String?
   industry              String // HVAC | PLUMBING | LEGAL | DENTAL | ROOFING | OTHER
   city                  String?
@@ -306,6 +307,19 @@ model ClientWorkOrder {
   generatedAt      DateTime?
   deliveredAt      DateTime?
 
+
+  // Beta delivery controls
+  ownerKind       String    @default("AI_PERSONA") // DOUGLAS | RYAN | AI_PERSONA
+  ownerLabel      String?
+  priority        String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  dueAt           DateTime?
+  evidenceLinks   Json?
+  internalNotes   String?   @db.Text
+  clientSummary   String?   @db.Text
+  approvalStatus  String    @default("PENDING") // PENDING | APPROVED | REJECTED | NOT_REQUIRED
+  approvedAt      DateTime?
+
+  events ClientWorkOrderEvent[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -313,6 +327,22 @@ model ClientWorkOrder {
   @@index([type])
   @@index([status])
   @@index([createdAt])
+}
+
+model ClientWorkOrderEvent {
+  id          String          @id @default(cuid())
+  workOrderId String
+  workOrder   ClientWorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?           @relation("WorkOrderEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type        String // CREATED | UPDATED | STATUS_CHANGED | APPROVAL_CHANGED | ARCHIVED
+  fromStatus  String?
+  toStatus    String?
+  notes       String?         @db.Text
+  createdAt   DateTime        @default(now())
+
+  @@index([workOrderId, createdAt])
+  @@index([actorId])
 }
 
 model ClientNote {
@@ -340,7 +370,7 @@ model ClientAccessRequest {
   platform         String // WEBSITE_CMS | GBP | GSC | GA4 | GOOGLE_ADS | META | EMAIL | SOCIAL | OTHER
   resourceUrl      String?
   externalVaultRef String? // Reference only; never store raw credentials or recovery material.
-  status           String    @default("NEEDED") // NEEDED | REQUESTED | RECEIVED_IN_VAULT | APPROVED | REJECTED | REVOKED
+  status           String    @default("NEEDED") // NEEDED | REQUESTED | INVITE_SENT | ACCESS_RECEIVED | VERIFIED | BLOCKED | REVOKED
   requestNotes     String?   @db.Text
   decisionNotes    String?   @db.Text
   requestedAt      DateTime  @default(now())

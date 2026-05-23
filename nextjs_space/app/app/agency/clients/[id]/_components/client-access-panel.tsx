@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { KeyRound, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { KeyRound, ShieldCheck, ShieldAlert, LockKeyhole } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -52,10 +52,10 @@ const PLATFORMS = [
 ]
 
 function statusBadgeClass(status: string) {
-  if (status === 'APPROVED') return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
-  if (status === 'RECEIVED_IN_VAULT') return 'border-blue-500/30 bg-blue-500/15 text-blue-300'
-  if (status === 'REJECTED' || status === 'REVOKED') return 'border-rose-500/30 bg-rose-500/15 text-rose-300'
-  if (status === 'REQUESTED') return 'border-amber-500/30 bg-amber-500/15 text-amber-300'
+  if (status === 'VERIFIED') return 'border-emerald-500/30 bg-emerald-500/15 text-emerald-300'
+  if (status === 'ACCESS_RECEIVED') return 'border-blue-500/30 bg-blue-500/15 text-blue-300'
+  if (status === 'BLOCKED' || status === 'REVOKED') return 'border-rose-500/30 bg-rose-500/15 text-rose-300'
+  if (status === 'INVITE_SENT' || status === 'REQUESTED') return 'border-amber-500/30 bg-amber-500/15 text-amber-300'
   return 'border-slate-500/30 bg-slate-500/15 text-slate-300'
 }
 
@@ -83,11 +83,11 @@ export function ClientAccessPanel({
 }) {
   const [requests, setRequests] = useState(initialRequests)
   const [busy, setBusy] = useState<string | null>(null)
-  const [form, setForm] = useState({ platform: 'WEBSITE_CMS', resourceUrl: '', externalVaultRef: '', requestNotes: '' })
+  const [form, setForm] = useState({ platform: 'WEBSITE_CMS', resourceUrl: '', requestNotes: '' })
   const [vaultDrafts, setVaultDrafts] = useState<Record<string, string>>(() =>
     Object.fromEntries(initialRequests.map((request) => [request.id, request.externalVaultRef ?? ''])),
   )
-  const isAdmin = currentUserRole === 'admin'
+  const isSuperAdmin = currentUserRole === 'superadmin'
 
   function upsertRequest(updated: ClientAccessRequest) {
     setRequests((prev) => [updated, ...prev.filter((request) => request.id !== updated.id)])
@@ -100,18 +100,15 @@ export function ClientAccessPanel({
       const res = await fetch(`/api/agency/clients/${clientId}/access-requests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          status: form.externalVaultRef.trim() ? 'RECEIVED_IN_VAULT' : 'REQUESTED',
-        }),
+        body: JSON.stringify({ ...form, status: 'REQUESTED' }),
       })
       if (!res.ok) throw new Error(await readError(res))
       const data = await res.json()
       upsertRequest(data.accessRequest)
-      setForm({ platform: 'WEBSITE_CMS', resourceUrl: '', externalVaultRef: '', requestNotes: '' })
-      toast.success('Access intake recorded')
+      setForm({ platform: 'WEBSITE_CMS', resourceUrl: '', requestNotes: '' })
+      toast.success('Access request recorded')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not record access intake')
+      toast.error(error instanceof Error ? error.message : 'Could not record access request')
     } finally {
       setBusy(null)
     }
@@ -140,9 +137,9 @@ export function ClientAccessPanel({
     const externalVaultRef = (vaultDrafts[request.id] ?? '').trim()
     patchAccessRequest(request.id, {
       externalVaultRef,
-      status: externalVaultRef ? 'RECEIVED_IN_VAULT' : request.status,
-      eventNotes: externalVaultRef ? 'External vault reference recorded; raw credentials remain outside LegacyLegion.' : 'External vault reference cleared.',
-    }, 'Vault reference updated')
+      status: externalVaultRef ? 'ACCESS_RECEIVED' : request.status,
+      eventNotes: externalVaultRef ? 'External reference recorded; raw credentials remain outside LegacyLegion.' : 'External reference cleared.',
+    }, 'External reference updated')
   }
 
   return (
@@ -153,7 +150,7 @@ export function ClientAccessPanel({
           <div>
             <div className="font-medium text-amber-100">Do not store passwords or recovery material here.</div>
             <div className="mt-1 text-sm text-amber-100/80">
-              Use this ledger to request access, record the external password-manager item or admin-invite reference, and capture approval. Raw credentials stay outside LegacyLegion.
+              Track whether access is needed, requested, invited, received, verified, blocked, or revoked. Raw credentials stay outside LegacyLegion; only SUPERADMIN can record external references.
             </div>
           </div>
         </div>
@@ -162,7 +159,7 @@ export function ClientAccessPanel({
       <Card className="p-4">
         <div className="mb-4 flex items-center gap-2">
           <KeyRound className="h-4 w-4" />
-          <div className="font-medium">New access intake</div>
+          <div className="font-medium">New access request</div>
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="space-y-1.5">
@@ -186,27 +183,18 @@ export function ClientAccessPanel({
             />
           </div>
           <div className="space-y-1.5 lg:col-span-2">
-            <Label htmlFor="access-vault-ref">External vault / admin invite reference</Label>
-            <Input
-              id="access-vault-ref"
-              value={form.externalVaultRef}
-              onChange={(event) => setForm((prev) => ({ ...prev, externalVaultRef: event.target.value }))}
-              placeholder="1Password item, Google admin invitation reference, or password-manager path"
-            />
-          </div>
-          <div className="space-y-1.5 lg:col-span-2">
-            <Label htmlFor="access-notes">Internal request notes</Label>
+            <Label htmlFor="access-notes">Request notes</Label>
             <Textarea
               id="access-notes"
               rows={3}
               value={form.requestNotes}
               onChange={(event) => setForm((prev) => ({ ...prev, requestNotes: event.target.value }))}
-              placeholder="Who needs access, why, approval context. No passwords, recovery codes, API keys, or tokens."
+              placeholder="Who needs access, why, and what invite/admin path is expected. No passwords, recovery codes, API keys, or tokens."
             />
           </div>
         </div>
         <div className="mt-3 flex justify-end">
-          <Button size="sm" onClick={createAccessRequest} disabled={busy === 'create'}>{busy === 'create' ? 'Recording…' : 'Record access intake'}</Button>
+          <Button size="sm" onClick={createAccessRequest} disabled={busy === 'create'}>{busy === 'create' ? 'Recording…' : 'Record access request'}</Button>
         </div>
       </Card>
 
@@ -224,39 +212,52 @@ export function ClientAccessPanel({
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     Requested by {actorName(request.requester)} • {new Date(request.requestedAt).toLocaleString()}
-                    {request.approver ? ` • Decision by ${actorName(request.approver)}` : ''}
+                    {request.approver ? ` • SUPERADMIN action by ${actorName(request.approver)}` : ''}
                   </div>
                   {request.resourceUrl && (
                     <a href={request.resourceUrl} target="_blank" rel="noreferrer" className="mt-2 block break-all text-sm text-primary hover:underline">{request.resourceUrl}</a>
                   )}
                   {request.requestNotes && <div className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{request.requestNotes}</div>}
-                  {request.decisionNotes && <div className="mt-2 whitespace-pre-wrap text-sm text-emerald-200">Decision: {request.decisionNotes}</div>}
+                  {isSuperAdmin && request.decisionNotes && <div className="mt-2 whitespace-pre-wrap text-sm text-emerald-200">SUPERADMIN notes: {request.decisionNotes}</div>}
                 </div>
                 <div className="min-w-[260px] space-y-2">
-                  <Label className="text-xs">External reference only</Label>
-                  <Input
-                    value={vaultDrafts[request.id] ?? ''}
-                    onChange={(event) => setVaultDrafts((prev) => ({ ...prev, [request.id]: event.target.value }))}
-                    placeholder="No raw credentials"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" disabled={busy === request.id} onClick={() => saveVaultRef(request)}>Save reference</Button>
-                    {isAdmin && request.status !== 'APPROVED' && (
-                      <Button
-                        size="sm"
-                        disabled={busy === request.id || !(vaultDrafts[request.id] ?? '').trim()}
-                        onClick={() => patchAccessRequest(request.id, { status: 'APPROVED', eventNotes: 'Access approved for controlled internal use.' }, 'Access approved')}
-                      >
-                        <ShieldCheck className="mr-1 h-4 w-4" />Approve
-                      </Button>
-                    )}
-                    {isAdmin && request.status === 'APPROVED' && (
-                      <Button size="sm" variant="outline" disabled={busy === request.id} onClick={() => patchAccessRequest(request.id, { status: 'REVOKED', eventNotes: 'Access approval revoked.' }, 'Access revoked')}>Revoke</Button>
-                    )}
-                    {isAdmin && request.status !== 'REJECTED' && request.status !== 'REVOKED' && request.status !== 'APPROVED' && (
-                      <Button size="sm" variant="ghost" disabled={busy === request.id} onClick={() => patchAccessRequest(request.id, { status: 'REJECTED', eventNotes: 'Access request rejected.' }, 'Access rejected')}>Reject</Button>
-                    )}
-                  </div>
+                  {isSuperAdmin ? (
+                    <>
+                      <Label htmlFor={`external-reference-${request.id}`} className="text-xs">External reference only</Label>
+                      <Input
+                        id={`external-reference-${request.id}`}
+                        value={vaultDrafts[request.id] ?? ''}
+                        onChange={(event) => setVaultDrafts((prev) => ({ ...prev, [request.id]: event.target.value }))}
+                        placeholder="No raw credentials"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" disabled={busy === request.id} onClick={() => saveVaultRef(request)}>Save reference</Button>
+                        {request.status !== 'INVITE_SENT' && request.status !== 'ACCESS_RECEIVED' && request.status !== 'VERIFIED' && request.status !== 'REVOKED' && (
+                          <Button size="sm" variant="outline" disabled={busy === request.id} onClick={() => patchAccessRequest(request.id, { status: 'INVITE_SENT', eventNotes: 'Admin invitation sent or requested through platform workflow.' }, 'Invite status recorded')}>Invite Sent</Button>
+                        )}
+                        {request.status !== 'VERIFIED' && (
+                          <Button
+                            size="sm"
+                            disabled={busy === request.id || !(vaultDrafts[request.id] ?? '').trim()}
+                            onClick={() => patchAccessRequest(request.id, { status: 'VERIFIED', eventNotes: 'Access verified for controlled internal use.' }, 'Access verified')}
+                          >
+                            <ShieldCheck className="mr-1 h-4 w-4" />Verify
+                          </Button>
+                        )}
+                        {request.status !== 'REVOKED' && (
+                          <Button size="sm" variant="outline" disabled={busy === request.id} onClick={() => patchAccessRequest(request.id, { status: 'REVOKED', eventNotes: 'Access revoked.' }, 'Access revoked')}>Revoke</Button>
+                        )}
+                        {request.status !== 'BLOCKED' && request.status !== 'VERIFIED' && request.status !== 'REVOKED' && (
+                          <Button size="sm" variant="ghost" disabled={busy === request.id} onClick={() => patchAccessRequest(request.id, { status: 'BLOCKED', eventNotes: 'Access blocked pending external action.' }, 'Access blocked')}>Block</Button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      <LockKeyhole className="mb-2 h-4 w-4" />
+                      External references and credential notes are SUPERADMIN-only. Ryan sees status, platform, URL, non-secret notes, and audit history only.
+                    </div>
+                  )}
                 </div>
               </div>
 
