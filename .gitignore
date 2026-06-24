@@ -24,3 +24,9 @@ tsconfig.tsbuildinfo
 nextjs_space/dogfood-output/
 nextjs_space/public-api-backups/
 nextjs_space/external/marketing-open-source/
+
+# local working notes (never commit)
+/task_plan.md
+/findings.md
+/progress.md
+/.planning/
