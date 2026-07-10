@@ -19,7 +19,7 @@ export default async function AgencyChatPage() {
         <Container size="xl">
           <PageHeader
             title="Agent Chat"
-            description="Talk to six LegacyLegion personas through RouteLLM. Client-scoped chats persist turns for memory."
+            description="Talk to personas or run the senior marketing runtime for LLM work, Douglas HIL tasks, and Ryan field assignments."
           />
           <div className="mt-6 pb-8">
             <AgencyChatClient clients={clients} />

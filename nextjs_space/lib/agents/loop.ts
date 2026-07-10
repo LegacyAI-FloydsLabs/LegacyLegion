@@ -208,6 +208,11 @@ async function streamModelCall(args: {
     }
 
     return { ok: true, text: fullText }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { ok: false, text: '', status: 0 }
+    }
+    throw error
   } finally {
     clearTimeout(timeout)
     if (args.signal) args.signal.removeEventListener('abort', onAbort)

@@ -15,7 +15,7 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer'
 import { toast } from 'sonner'
-import { Bot, ChevronDown } from 'lucide-react'
+import { Bot, ChevronDown, Workflow } from 'lucide-react'
 
 type Message = { role: 'user' | 'assistant' | 'system'; content: string }
 
@@ -29,6 +29,7 @@ export function AgencyChatClient({ clients }: { clients: { id: string; businessN
   const [threadId, setThreadId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
+  const [runtimeLoading, setRuntimeLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -45,7 +46,7 @@ export function AgencyChatClient({ clients }: { clients: { id: string; businessN
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const text = message.trim()
-    if (!text || loading) return
+    if (!text || loading || runtimeLoading) return
     if (needsClient && !clientId) {
       setError('Pick a client before using Account Manager.')
       return
@@ -101,6 +102,38 @@ export function AgencyChatClient({ clients }: { clients: { id: string; businessN
     }
   }
 
+  async function runMarketingRuntime() {
+    const text = message.trim()
+    if (!text || loading || runtimeLoading) return
+
+    setError(null)
+    setMessage('')
+    setRuntimeLoading(true)
+    setMessages((current) => [...current, { role: 'user', content: text }, { role: 'assistant', content: '' }])
+
+    try {
+      const res = await fetch('/api/agents/marketing-runtime/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: text, clientId }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      const result = data?.result
+      if (result?.threadId) setThreadId(result.threadId)
+      const content = String(result?.finalMarkdown ?? '').trim() || 'Marketing runtime completed.'
+      setMessages((current) => current.map((item, index) => (
+        index === current.length - 1 ? { ...item, content } : item
+      )))
+      if (result?.workOrderId) toast.success('Senior marketing runtime work order created')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Marketing runtime failed')
+      setMessages((current) => current.filter((_, index) => index !== current.length - 1))
+    } finally {
+      setRuntimeLoading(false)
+    }
+  }
+
   async function createWorkOrderFromResponse(content: string, index: number) {
     if (!clientId || !content.trim()) return
     setWorkOrderBusy(index)
@@ -147,10 +180,12 @@ export function AgencyChatClient({ clients }: { clients: { id: string; businessN
           selectedPersona={selectedPersona}
           messages={messages}
           loading={loading}
+          runtimeLoading={runtimeLoading}
           error={error}
           message={message}
           setMessage={setMessage}
           sendMessage={sendMessage}
+          runMarketingRuntime={runMarketingRuntime}
           clientId={clientId}
           workOrderBusy={workOrderBusy}
           createWorkOrderFromResponse={createWorkOrderFromResponse}
@@ -200,10 +235,12 @@ export function AgencyChatClient({ clients }: { clients: { id: string; businessN
           selectedPersona={selectedPersona}
           messages={messages}
           loading={loading}
+          runtimeLoading={runtimeLoading}
           error={error}
           message={message}
           setMessage={setMessage}
           sendMessage={sendMessage}
+          runMarketingRuntime={runMarketingRuntime}
           clientId={clientId}
           workOrderBusy={workOrderBusy}
           createWorkOrderFromResponse={createWorkOrderFromResponse}
@@ -306,16 +343,18 @@ function MobileSettingsPanel({
 
 function ChatTerminal({
   selectedPersona, messages, loading, error, message, setMessage,
-  sendMessage, clientId, workOrderBusy, createWorkOrderFromResponse,
+  sendMessage, runMarketingRuntime, runtimeLoading, clientId, workOrderBusy, createWorkOrderFromResponse,
   className,
 }: {
   selectedPersona: { displayName: string } | undefined
   messages: Message[]
   loading: boolean
+  runtimeLoading: boolean
   error: string | null
   message: string
   setMessage: (v: string) => void
   sendMessage: (e: FormEvent<HTMLFormElement>) => void
+  runMarketingRuntime: () => void
   clientId: string
   workOrderBusy: number | null
   createWorkOrderFromResponse: (content: string, index: number) => void
@@ -348,15 +387,22 @@ function ChatTerminal({
       </div>
 
       {error && <div className="border-t border-destructive/30 px-4 py-2 text-sm text-destructive">{error}</div>}
-      <form onSubmit={sendMessage} className="flex gap-2 border-t border-border p-2 sm:p-3">
-        <input
-          aria-label="Message to selected AI persona"
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          placeholder="Ask the agent…"
-          className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
-        />
-        <Button type="submit" disabled={loading || !message.trim()}>{loading ? 'Sending' : 'Send'}</Button>
+      <form onSubmit={sendMessage} className="border-t border-border p-2 sm:p-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            aria-label="Message to selected AI persona"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder="Ask an agent or give the runtime a mission..."
+            className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+          />
+          <div className="flex gap-2 sm:shrink-0">
+            <Button type="submit" disabled={loading || runtimeLoading || !message.trim()} className="flex-1 sm:flex-none">{loading ? 'Sending' : 'Send'}</Button>
+            <Button type="button" variant="outline" onClick={runMarketingRuntime} disabled={loading || runtimeLoading || !message.trim()} className="flex-1 sm:flex-none">
+              <Workflow className="mr-2 h-4 w-4" />{runtimeLoading ? 'Running' : 'Run Runtime'}
+            </Button>
+          </div>
+        </div>
       </form>
     </Card>
   )
