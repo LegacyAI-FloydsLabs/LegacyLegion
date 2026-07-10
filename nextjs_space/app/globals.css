@@ -23,22 +23,34 @@
     --border: 240 5% 16%;
     --input: 240 5% 14%;
     --ring: 263 78% 60%;
+
     --radius: 0.625rem;
     --radius-sm: calc(0.625rem - 4px);
     --radius-lg: calc(0.625rem + 4px);
     --radius-full: 9999px;
+
     --duration-fast: 150ms;
     --duration-normal: 250ms;
     --duration-slow: 350ms;
+
     --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
     --shadow-md: 0 4px 8px -2px rgb(0 0 0 / 0.45);
     --shadow-lg: 0 12px 28px -4px rgb(0 0 0 / 0.55);
+
     --chart-1: 263 78% 60%;
     --chart-2: 173 58% 50%;
     --chart-3: 32 95% 64%;
     --chart-4: 200 90% 60%;
     --chart-5: 340 75% 65%;
+
+    --hero-gradient:
+      radial-gradient(ellipse 80% 60% at 50% -20%, hsl(var(--primary) / 0.25), transparent),
+      radial-gradient(ellipse 50% 40% at 85% 0%, hsl(280 80% 60% / 0.15), transparent),
+      radial-gradient(ellipse 50% 30% at 15% 10%, hsl(220 80% 60% / 0.10), transparent);
+
+    --text-gradient: linear-gradient(135deg, hsl(263 78% 70%), hsl(290 80% 65%));
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -59,6 +71,536 @@
     --border: 240 5% 16%;
     --input: 240 5% 14%;
     --ring: 263 78% 60%;
+  }
+
+  [data-theme='ocean-depths'] {
+    --background: 180 52% 95%;
+    --foreground: 210 30% 15%;
+    --card: 180 52% 95%;
+    --card-foreground: 210 30% 15%;
+    --popover: 180 52% 95%;
+    --popover-foreground: 210 30% 15%;
+    --primary: 180 52% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 47% 76%;
+    --secondary-foreground: 210 30% 15%;
+    --muted: 180 33% 87%;
+    --muted-foreground: 210 20% 40%;
+    --accent: 210 30% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 180 47% 76%;
+    --input: 180 43% 91%;
+    --ring: 180 52% 37%;
+    --chart-1: 180 52% 37%;
+    --chart-2: 170 47% 73%;
+    --chart-3: 210 30% 15%;
+    --chart-4: 180 33% 87%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(180 52% 37% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(197 30% 24% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(170 47% 73% / 0.30), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(180 52% 37%), hsl(197 30% 24%));
+  }
+
+  .dark[data-theme='ocean-depths'] {
+    --background: 210 30% 15%;
+    --foreground: 80 33% 95%;
+    --card: 210 30% 15%;
+    --card-foreground: 80 33% 95%;
+    --popover: 210 30% 15%;
+    --popover-foreground: 80 33% 95%;
+    --primary: 180 52% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 32% 22%;
+    --secondary-foreground: 80 33% 95%;
+    --muted: 213 25% 22%;
+    --muted-foreground: 180 20% 72%;
+    --accent: 170 47% 73%;
+    --accent-foreground: 210 30% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 213 24% 25%;
+    --input: 212 26% 21%;
+    --ring: 180 52% 37%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(180 52% 37% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(197 30% 24% / 0.30), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(170 47% 73% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(170 47% 73%), hsl(180 52% 37%));
+  }
+
+  [data-theme='sunset-boulevard'] {
+    --background: 30 100% 97%;
+    --foreground: 192 39% 23%;
+    --card: 30 100% 97%;
+    --card-foreground: 192 39% 23%;
+    --popover: 30 100% 97%;
+    --popover-foreground: 192 39% 23%;
+    --primary: 17 78% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 28 87% 67%;
+    --secondary-foreground: 192 39% 23%;
+    --muted: 28 60% 91%;
+    --muted-foreground: 192 30% 35%;
+    --accent: 192 39% 23%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 28 87% 67%;
+    --input: 30 100% 94%;
+    --ring: 17 78% 61%;
+    --chart-1: 17 78% 61%;
+    --chart-2: 28 87% 67%;
+    --chart-3: 192 39% 23%;
+    --chart-4: 28 60% 91%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(17 78% 61% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(28 87% 67% / 0.20), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(192 39% 30% / 0.12), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(17 78% 61%), hsl(28 87% 67%));
+  }
+
+  .dark[data-theme='sunset-boulevard'] {
+    --background: 192 39% 23%;
+    --foreground: 30 100% 97%;
+    --card: 192 39% 23%;
+    --card-foreground: 30 100% 97%;
+    --popover: 192 39% 23%;
+    --popover-foreground: 30 100% 97%;
+    --primary: 17 78% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 25 42% 38%;
+    --secondary-foreground: 30 100% 97%;
+    --muted: 195 24% 31%;
+    --muted-foreground: 30 35% 80%;
+    --accent: 28 87% 67%;
+    --accent-foreground: 192 39% 23%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 195 24% 35%;
+    --input: 194 26% 29%;
+    --ring: 17 78% 61%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(17 78% 61% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(28 87% 67% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(192 39% 30% / 0.30), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(28 87% 67%), hsl(17 78% 61%));
+  }
+
+  [data-theme='forest-canopy'] {
+    --background: 60 20% 98%;
+    --foreground: 116 26% 23%;
+    --card: 60 20% 98%;
+    --card-foreground: 116 26% 23%;
+    --popover: 60 20% 98%;
+    --popover-foreground: 116 26% 23%;
+    --primary: 116 26% 23%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 80 15% 60%;
+    --secondary-foreground: 116 26% 23%;
+    --muted: 74 18% 90%;
+    --muted-foreground: 116 20% 32%;
+    --accent: 73 11% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 80 15% 60%;
+    --input: 70 18% 94%;
+    --ring: 116 26% 23%;
+    --chart-1: 116 26% 23%;
+    --chart-2: 80 15% 60%;
+    --chart-3: 73 11% 48%;
+    --chart-4: 74 18% 90%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(116 26% 23% / 0.18), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(73 11% 48% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(80 15% 60% / 0.22), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(116 26% 23%), hsl(73 11% 48%));
+  }
+
+  .dark[data-theme='forest-canopy'] {
+    --background: 116 26% 23%;
+    --foreground: 60 20% 98%;
+    --card: 116 26% 23%;
+    --card-foreground: 60 20% 98%;
+    --popover: 116 26% 23%;
+    --popover-foreground: 60 20% 98%;
+    --primary: 80 15% 60%;
+    --primary-foreground: 116 26% 23%;
+    --secondary: 84 28% 28%;
+    --secondary-foreground: 60 20% 98%;
+    --muted: 118 22% 28%;
+    --muted-foreground: 60 20% 85%;
+    --accent: 73 11% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 118 22% 28%;
+    --input: 116 24% 25%;
+    --ring: 80 15% 60%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(116 26% 23% / 0.30), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(73 11% 48% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(80 15% 60% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(80 15% 60%), hsl(116 26% 23%));
+  }
+
+  [data-theme='modern-minimalist'] {
+    --background: 0 0% 100%;
+    --foreground: 200 18% 27%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 18% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 18% 27%;
+    --primary: 200 18% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 83%;
+    --secondary-foreground: 200 18% 27%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 200 10% 40%;
+    --accent: 210 11% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 83%;
+    --input: 0 0% 97%;
+    --ring: 200 18% 27%;
+    --chart-1: 200 18% 27%;
+    --chart-2: 210 11% 50%;
+    --chart-3: 0 0% 83%;
+    --chart-4: 0 0% 94%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(200 18% 27% / 0.10), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(210 11% 50% / 0.08), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 83% / 0.25), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(200 18% 27%), hsl(210 11% 50%));
+  }
+
+  .dark[data-theme='modern-minimalist'] {
+    --background: 200 18% 27%;
+    --foreground: 0 0% 100%;
+    --card: 200 18% 27%;
+    --card-foreground: 0 0% 100%;
+    --popover: 200 18% 27%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 210 11% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 11% 34%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 11% 34%;
+    --muted-foreground: 0 0% 75%;
+    --accent: 0 0% 83%;
+    --accent-foreground: 200 18% 27%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 200 11% 37%;
+    --input: 200 11% 31%;
+    --ring: 210 11% 50%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(200 18% 27% / 0.30), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(210 11% 50% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 83% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(0 0% 83%), hsl(210 11% 50%));
+  }
+
+  [data-theme='golden-hour'] {
+    --background: 35 100% 98%;
+    --foreground: 25 14% 26%;
+    --card: 35 100% 98%;
+    --card-foreground: 25 14% 26%;
+    --popover: 35 100% 98%;
+    --popover-foreground: 25 14% 26%;
+    --primary: 42 100% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 36% 71%;
+    --secondary-foreground: 25 14% 26%;
+    --muted: 30 45% 90%;
+    --muted-foreground: 25 10% 35%;
+    --accent: 4 42% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 36% 71%;
+    --input: 34 80% 95%;
+    --ring: 42 100% 48%;
+    --chart-1: 42 100% 48%;
+    --chart-2: 4 42% 59%;
+    --chart-3: 30 36% 71%;
+    --chart-4: 30 45% 90%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(42 100% 48% / 0.22), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(4 42% 59% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(30 36% 71% / 0.25), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(42 100% 48%), hsl(4 42% 59%));
+  }
+
+  .dark[data-theme='golden-hour'] {
+    --background: 25 14% 26%;
+    --foreground: 35 100% 98%;
+    --card: 25 14% 26%;
+    --card-foreground: 35 100% 98%;
+    --popover: 25 14% 26%;
+    --popover-foreground: 35 100% 98%;
+    --primary: 42 100% 48%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 18% 36%;
+    --secondary-foreground: 35 100% 98%;
+    --muted: 25 16% 33%;
+    --muted-foreground: 35 40% 80%;
+    --accent: 4 42% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 18% 36%;
+    --input: 25 16% 30%;
+    --ring: 42 100% 48%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(42 100% 48% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(4 42% 59% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(30 36% 71% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(42 100% 48%), hsl(30 36% 71%));
+  }
+
+  [data-theme='arctic-frost'] {
+    --background: 0 0% 98%;
+    --foreground: 216 38% 47%;
+    --card: 0 0% 98%;
+    --card-foreground: 216 38% 47%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 216 38% 47%;
+    --primary: 216 38% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 59% 90%;
+    --secondary-foreground: 216 38% 47%;
+    --muted: 213 50% 94%;
+    --muted-foreground: 216 25% 40%;
+    --accent: 0 0% 75%;
+    --accent-foreground: 216 38% 47%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 213 59% 90%;
+    --input: 213 70% 97%;
+    --ring: 216 38% 47%;
+    --chart-1: 216 38% 47%;
+    --chart-2: 0 0% 75%;
+    --chart-3: 213 59% 90%;
+    --chart-4: 213 50% 94%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(216 38% 47% / 0.16), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(213 59% 90% / 0.25), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 75% / 0.15), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(216 38% 47%), hsl(213 59% 90%));
+  }
+
+  .dark[data-theme='arctic-frost'] {
+    --background: 216 30% 15%;
+    --foreground: 0 0% 98%;
+    --card: 216 30% 15%;
+    --card-foreground: 0 0% 98%;
+    --popover: 216 30% 15%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 216 38% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 38% 27%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 214 30% 24%;
+    --muted-foreground: 213 30% 75%;
+    --accent: 0 0% 75%;
+    --accent-foreground: 216 30% 15%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 216 30% 27%;
+    --input: 214 30% 23%;
+    --ring: 216 38% 47%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(216 38% 47% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(213 59% 90% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 75% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(213 59% 90%), hsl(216 38% 47%));
+  }
+
+  [data-theme='desert-rose'] {
+    --background: 26 30% 84%;
+    --foreground: 330 34% 27%;
+    --card: 26 30% 84%;
+    --card-foreground: 330 34% 27%;
+    --popover: 26 30% 84%;
+    --popover-foreground: 330 34% 27%;
+    --primary: 330 34% 27%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 34% 74%;
+    --secondary-foreground: 330 34% 27%;
+    --muted: 24 23% 78%;
+    --muted-foreground: 330 20% 35%;
+    --accent: 14 32% 57%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 34% 74%;
+    --input: 25 36% 90%;
+    --ring: 330 34% 27%;
+    --chart-1: 330 34% 27%;
+    --chart-2: 14 32% 57%;
+    --chart-3: 0 34% 74%;
+    --chart-4: 24 23% 78%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(330 34% 27% / 0.12), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(14 32% 57% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 34% 74% / 0.25), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(330 34% 27%), hsl(14 32% 57%));
+  }
+
+  .dark[data-theme='desert-rose'] {
+    --background: 330 34% 27%;
+    --foreground: 26 30% 84%;
+    --card: 330 34% 27%;
+    --card-foreground: 26 30% 84%;
+    --popover: 330 34% 27%;
+    --popover-foreground: 26 30% 84%;
+    --primary: 0 34% 74%;
+    --primary-foreground: 330 34% 27%;
+    --secondary: 335 32% 35%;
+    --secondary-foreground: 26 30% 84%;
+    --muted: 332 26% 32%;
+    --muted-foreground: 26 30% 84%;
+    --accent: 14 32% 57%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 335 24% 37%;
+    --input: 333 26% 33%;
+    --ring: 0 34% 74%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(330 34% 27% / 0.30), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(14 32% 57% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 34% 74% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(0 34% 74%), hsl(14 32% 57%));
+  }
+
+  [data-theme='tech-innovation'] {
+    --background: 210 20% 98%;
+    --foreground: 0 0% 12%;
+    --card: 210 20% 98%;
+    --card-foreground: 0 0% 12%;
+    --popover: 210 20% 98%;
+    --popover-foreground: 0 0% 12%;
+    --primary: 217 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 100% 50%;
+    --secondary-foreground: 0 0% 12%;
+    --muted: 210 50% 94%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 0 0% 12%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 213 80% 91%;
+    --input: 213 100% 96%;
+    --ring: 217 100% 50%;
+    --chart-1: 217 100% 50%;
+    --chart-2: 180 100% 50%;
+    --chart-3: 0 0% 12%;
+    --chart-4: 210 50% 94%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(217 100% 50% / 0.18), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(180 100% 50% / 0.15), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 12% / 0.08), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(217 100% 50%), hsl(180 100% 50%));
+  }
+
+  .dark[data-theme='tech-innovation'] {
+    --background: 0 0% 12%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 217 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 100% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 75%;
+    --accent: 180 100% 50%;
+    --accent-foreground: 0 0% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 17%;
+    --ring: 217 100% 50%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(217 100% 50% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(180 100% 50% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(0 0% 12% / 0.30), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(180 100% 50%), hsl(217 100% 50%));
+  }
+
+  [data-theme='botanical-garden'] {
+    --background: 45 25% 95%;
+    --foreground: 138 25% 39%;
+    --card: 45 25% 95%;
+    --card-foreground: 138 25% 39%;
+    --popover: 45 25% 95%;
+    --popover-foreground: 138 25% 39%;
+    --primary: 138 25% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 94% 55%;
+    --secondary-foreground: 138 25% 39%;
+    --muted: 43 18% 90%;
+    --muted-foreground: 138 18% 32%;
+    --accent: 10 63% 44%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 43 18% 84%;
+    --input: 45 25% 97%;
+    --ring: 138 25% 39%;
+    --chart-1: 138 25% 39%;
+    --chart-2: 38 94% 55%;
+    --chart-3: 10 63% 44%;
+    --chart-4: 43 18% 90%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(138 25% 39% / 0.15), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(38 94% 55% / 0.12), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(10 63% 44% / 0.10), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(138 25% 39%), hsl(38 94% 55%));
+  }
+
+  .dark[data-theme='botanical-garden'] {
+    --background: 30 16% 20%;
+    --foreground: 45 25% 95%;
+    --card: 30 16% 20%;
+    --card-foreground: 45 25% 95%;
+    --popover: 30 16% 20%;
+    --popover-foreground: 45 25% 95%;
+    --primary: 138 25% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 42% 25%;
+    --secondary-foreground: 45 25% 95%;
+    --muted: 30 14% 27%;
+    --muted-foreground: 45 25% 85%;
+    --accent: 38 94% 55%;
+    --accent-foreground: 30 16% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 14% 28%;
+    --input: 30 14% 24%;
+    --ring: 138 25% 39%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(138 25% 39% / 0.25), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(38 94% 55% / 0.10), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(10 63% 44% / 0.12), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(138 25% 39%), hsl(10 63% 44%));
+  }
+
+  [data-theme='midnight-galaxy'] {
+    --background: 264 34% 17%;
+    --foreground: 250 90% 96%;
+    --card: 264 34% 17%;
+    --card-foreground: 250 90% 96%;
+    --popover: 264 34% 17%;
+    --popover-foreground: 250 90% 96%;
+    --primary: 266 28% 66%;
+    --primary-foreground: 264 34% 17%;
+    --secondary: 236 31% 42%;
+    --secondary-foreground: 250 90% 96%;
+    --muted: 266 22% 25%;
+    --muted-foreground: 250 50% 80%;
+    --accent: 250 90% 96%;
+    --accent-foreground: 264 34% 17%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 266 22% 32%;
+    --input: 264 24% 24%;
+    --ring: 266 28% 66%;
+    --chart-1: 266 28% 66%;
+    --chart-2: 236 31% 42%;
+    --chart-3: 250 90% 96%;
+    --chart-4: 266 22% 25%;
+    --chart-5: 0 72% 51%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(267 34% 18% / 0.35), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(236 31% 42% / 0.25), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(266 28% 66% / 0.12), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(266 28% 66%), hsl(236 31% 42%));
+  }
+
+  .dark[data-theme='midnight-galaxy'] {
+    --background: 264 34% 17%;
+    --foreground: 250 90% 96%;
+    --card: 264 34% 17%;
+    --card-foreground: 250 90% 96%;
+    --popover: 264 34% 17%;
+    --popover-foreground: 250 90% 96%;
+    --primary: 266 28% 66%;
+    --primary-foreground: 264 34% 17%;
+    --secondary: 236 31% 42%;
+    --secondary-foreground: 250 90% 96%;
+    --muted: 266 22% 25%;
+    --muted-foreground: 250 50% 80%;
+    --accent: 250 90% 96%;
+    --accent-foreground: 264 34% 17%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 266 22% 32%;
+    --input: 264 24% 24%;
+    --ring: 266 28% 66%;
+    --hero-gradient: radial-gradient(ellipse 80% 60% at 50% -20%, hsl(267 34% 18% / 0.35), transparent), radial-gradient(ellipse 50% 40% at 85% 0%, hsl(236 31% 42% / 0.25), transparent), radial-gradient(ellipse 50% 30% at 15% 10%, hsl(266 28% 66% / 0.12), transparent);
+    --text-gradient: linear-gradient(135deg, hsl(266 28% 66%), hsl(236 31% 42%));
   }
 }
 
@@ -88,10 +630,7 @@
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
   .hero-gradient {
-    background:
-      radial-gradient(ellipse 80% 60% at 50% -20%, hsl(263 78% 60% / 0.25), transparent),
-      radial-gradient(ellipse 50% 40% at 85% 0%, hsl(280 80% 60% / 0.15), transparent),
-      radial-gradient(ellipse 50% 30% at 15% 10%, hsl(220 80% 60% / 0.10), transparent);
+    background: var(--hero-gradient);
   }
 
   .grid-pattern {
@@ -106,7 +645,7 @@
   }
 
   .text-gradient {
-    background: linear-gradient(135deg, hsl(263 78% 70%), hsl(290 80% 65%));
+    background: var(--text-gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

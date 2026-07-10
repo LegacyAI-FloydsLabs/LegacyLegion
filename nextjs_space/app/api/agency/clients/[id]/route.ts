@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdminUser, requireInternalUser } from '@/lib/authz'
+import { requireInternalUser, requireSuperAdminUser } from '@/lib/authz'
 import { prisma } from '@/lib/db'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireAdminUser()
+  const auth = await requireSuperAdminUser()
   if ('response' in auth) return auth.response
   await prisma.client.delete({ where: { id: params.id } })
   return NextResponse.json({ ok: true })

@@ -11,6 +11,7 @@ export const EXPORT_MARKDOWN_H2_ORDER = [
 ] as const
 
 export type ClientSnapshotFormat = 'md' | 'json' | 'pdf'
+export type WeeklyReportAudience = 'internal' | 'client'
 
 export interface ClientSnapshot {
   generatedAt: string
@@ -19,6 +20,8 @@ export interface ClientSnapshot {
   workOrders: any[]
   notes: any[]
   conversations: any[]
+  accessRequests: any[]
+  prospects: any[]
   intelligenceBrief: any | null
 }
 
@@ -33,12 +36,19 @@ function iso(value: Date | string | null | undefined) {
   return value instanceof Date ? value.toISOString() : value
 }
 
+
+const SECRET_EXPORT_FIELDS = new Set(['externalVaultRef', 'decisionNotes', 'password', 'secret', 'token', 'apiKey', 'accessToken', 'refreshToken'])
+
+function isSecretExportField(key: string): boolean {
+  return SECRET_EXPORT_FIELDS.has(key) || /(password|secret|token|api[_-]?key|credential|recovery)/i.test(key)
+}
 function cleanJson(value: any): any {
   if (value instanceof Date) return value.toISOString()
   if (Array.isArray(value)) return value.map(cleanJson)
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cleanJson(item)]))
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !isSecretExportField(key)).map(([key, item]) => [key, cleanJson(item)]))
   }
+  if (typeof value === 'string') return redactReportText(value)
   return value ?? null
 }
 
@@ -51,11 +61,14 @@ export async function getClientSnapshot({
   exportedById: string
   generatedAt?: Date
 }): Promise<ClientSnapshot> {
-  const [client, workOrders, notes, conversations, intelligenceBrief] = await Promise.all([
+  const [client, workOrders, notes, conversations, intelligenceBrief, accessRequests, prospects] = await Promise.all([
     prisma.client.findUnique({ where: { id: clientId } }),
     prisma.clientWorkOrder.findMany({
       where: { clientId, createdAt: { gte: daysAgo(generatedAt, 90) } },
-      include: { author: { select: { name: true, email: true } } },
+      include: {
+        author: { select: { name: true, email: true } },
+        events: { orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 20, include: { actor: { select: { name: true, email: true } } } },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     }),
     prisma.clientNote.findMany({
@@ -69,6 +82,36 @@ export async function getClientSnapshot({
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     }),
     prisma.clientIntelligence.findUnique({ where: { clientId } }),
+    prisma.clientAccessRequest.findMany({
+      where: { clientId, updatedAt: { gte: daysAgo(generatedAt, 90) } },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      select: {
+        id: true,
+        clientId: true,
+        platform: true,
+        resourceUrl: true,
+        status: true,
+        requestNotes: true,
+        requestedAt: true,
+        receivedAt: true,
+        approvedAt: true,
+        revokedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        requester: { select: { name: true, email: true } },
+        approver: { select: { name: true, email: true } },
+        events: {
+          orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+          take: 20,
+          include: { actor: { select: { name: true, email: true } } },
+        },
+      },
+    }),
+    prisma.prospect.findMany({
+      where: { clientId, createdAt: { gte: daysAgo(generatedAt, 90) } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      take: 100,
+    }),
   ])
   if (!client) throw new Error('CLIENT_NOT_FOUND')
 
@@ -80,6 +123,8 @@ export async function getClientSnapshot({
     notes: cleanJson(notes),
     conversations: cleanJson(conversations),
     intelligenceBrief: cleanJson(intelligenceBrief),
+    accessRequests: cleanJson(accessRequests),
+    prospects: cleanJson(prospects),
   }
 }
 
@@ -90,6 +135,119 @@ function valueOrDash(value: unknown) {
 
 function bullet(label: string, value: unknown) {
   return `- ${label}: ${valueOrDash(value)}`
+}
+
+function redactReportText(value: unknown) {
+  return String(value ?? '')
+    .replace(/-----BEGIN [\s\S]*?PRIVATE KEY-----/gi, '[REDACTED_PRIVATE_KEY]')
+    .replace(/\b(password|passcode|recovery\s*code|backup\s*code|otp|2fa\s*code|secret|api[_\s-]?key|token)\b\s*[:=]\s*\S+/gi, '$1=[REDACTED]')
+    .replace(/\b(bearer|basic)\s+[a-z0-9._~+/=-]{12,}/gi, '$1 [REDACTED]')
+    .replace(/postgresql:\/\/[^\s)]+/gi, '[REDACTED_DATABASE_URL]')
+}
+
+function linesForOrders(workOrders: any[], predicate: (order: any) => boolean) {
+  const selected = workOrders.filter(predicate)
+  return selected.length ? selected.map((order) => `- ${order.title} (${order.type}, ${order.status}, ${order.approvalStatus ?? 'PENDING'})`) : ['- None.']
+}
+
+function linesForProspects(prospects: any[]) {
+  if (!prospects.length) return ['- None.']
+  return prospects.slice(0, 20).map((prospect) => {
+    const label = prospect.companyName ?? prospect.companyDomain ?? [prospect.personFirstName, prospect.personLastName].filter(Boolean).join(' ') ?? 'Unnamed prospect'
+    const promoted = prospect.promotedToLeadId ? ' — imported to Leads' : ''
+    return `- ${label} (${prospect.source}${promoted})`
+  })
+}
+
+function evidenceLines(workOrders: any[]) {
+  const lines = workOrders.flatMap((order) => (
+    Array.isArray(order.evidenceLinks)
+      ? order.evidenceLinks.map((link: string) => `- ${order.title}: ${link}`)
+      : []
+  ))
+  return lines.length ? lines : ['- None recorded.']
+}
+
+function reportOrderLine(order: any, includeInternal: boolean) {
+  const bits = [order.type, order.status, order.approvalStatus ?? 'PENDING'].filter(Boolean).join(', ')
+  const summary = includeInternal
+    ? (order.internalNotes || order.clientSummary || order.outputMarkdown || '')
+    : (order.clientSummary || order.outputMarkdown || '')
+  const excerpt = redactReportText(summary).replace(/\s+/g, ' ').trim().slice(0, 220)
+  return `- ${order.title} (${bits})${excerpt ? ` — ${excerpt}` : ''}`
+}
+
+function reportOrderLines(workOrders: any[], predicate: (order: any) => boolean, includeInternal: boolean) {
+  const selected = workOrders.filter(predicate)
+  return selected.length ? selected.map((order) => reportOrderLine(order, includeInternal)) : ['- None.']
+}
+
+function actionTypeIncludes(order: any, words: string[]) {
+  const haystack = `${order.type} ${order.title}`.toLowerCase()
+  return words.some((word) => haystack.includes(word))
+}
+
+export function renderWeeklyReportMarkdown(snapshot: ClientSnapshot, audience: WeeklyReportAudience) {
+  const client = snapshot.client
+  const includeInternal = audience === 'internal'
+  const completed = snapshot.workOrders.filter((order) => order.status === 'DELIVERED')
+  const pendingApprovals = snapshot.workOrders.filter((order) => order.approvalStatus === 'PENDING' && order.status !== 'ARCHIVED')
+  const blockedAccess = snapshot.accessRequests.filter((request) => ['NEEDED', 'REQUESTED', 'INVITE_SENT', 'BLOCKED'].includes(request.status))
+  const gbpActions = snapshot.workOrders.filter((order) => actionTypeIncludes(order, ['gbp', 'google business', 'review']))
+  const websiteActions = snapshot.workOrders.filter((order) => actionTypeIncludes(order, ['website', 'seo', 'service_area', 'local_service']))
+  const socialActions = snapshot.workOrders.filter((order) => actionTypeIncludes(order, ['social', 'content', 'calendar']))
+  const nextPriorities = snapshot.workOrders.filter((order) => !['DELIVERED', 'ARCHIVED'].includes(order.status))
+  const leadsCreated = snapshot.prospects.filter((prospect) => prospect.promotedToLeadId)
+
+  const lines = [
+    `# Weekly ${includeInternal ? 'Internal Operator' : 'Client-Facing'} Report — ${client.businessName}`,
+    '',
+    `Generated at: ${snapshot.generatedAt}`,
+    `Audience: ${includeInternal ? 'Douglas/Ryan internal operators' : 'Client-facing update'}`,
+    '',
+    '## Client Context',
+    bullet('Business', client.businessName),
+    bullet('Industry', client.industry),
+    bullet('Market', [client.city, client.state].filter(Boolean).join(', ')),
+    bullet('Website', client.website),
+    bullet('Google Business Profile', client.gbpUrl),
+    bullet('Service tier', client.tier),
+    '',
+    '## Completed Work Orders',
+    ...reportOrderLines(completed, () => true, includeInternal),
+    '',
+    '## Pending Approvals',
+    ...reportOrderLines(pendingApprovals, () => true, includeInternal),
+    '',
+    '## Blocked Account Access',
+    ...(blockedAccess.length ? blockedAccess.map((request) => `- ${request.platform}: ${request.status}${request.resourceUrl ? ` — ${request.resourceUrl}` : ''}${request.requestNotes ? ` — ${redactReportText(request.requestNotes)}` : ''}`) : ['- None.']),
+    '',
+    '## Leads Created',
+    ...linesForProspects(leadsCreated),
+    '',
+    '## Prospecting Activity',
+    ...linesForProspects(snapshot.prospects),
+    '',
+    '## GBP Actions',
+    ...reportOrderLines(gbpActions, () => true, includeInternal),
+    '',
+    '## Website / SEO Actions',
+    ...reportOrderLines(websiteActions, () => true, includeInternal),
+    '',
+    '## Social / Content Actions',
+    ...reportOrderLines(socialActions, () => true, includeInternal),
+    '',
+    '## Evidence Links',
+    ...evidenceLines(snapshot.workOrders),
+    '',
+    '## Next-Week Priorities',
+    ...reportOrderLines(nextPriorities, () => true, includeInternal),
+    '',
+    '## Secret Safety',
+    '- Raw credentials, passwords, tokens, API keys, and recovery material are intentionally excluded.',
+  ]
+
+  return `${redactReportText(lines.join('\n'))}\n`
 }
 
 function jsonBlock(value: unknown) {

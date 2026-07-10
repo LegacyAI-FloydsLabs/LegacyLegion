@@ -13,15 +13,16 @@ export const ACCESS_PLATFORMS = [
 export const ACCESS_STATUSES = [
   'NEEDED',
   'REQUESTED',
-  'RECEIVED_IN_VAULT',
-  'APPROVED',
-  'REJECTED',
+  'INVITE_SENT',
+  'ACCESS_RECEIVED',
+  'VERIFIED',
+  'BLOCKED',
   'REVOKED',
 ] as const
 
 const STATUS_SET = new Set<string>(ACCESS_STATUSES)
 const PLATFORM_SET = new Set<string>(ACCESS_PLATFORMS)
-const DECISION_STATUS_SET = new Set<string>(['APPROVED', 'REJECTED', 'REVOKED'])
+const SUPERADMIN_STATUS_SET = new Set<string>(['ACCESS_RECEIVED', 'VERIFIED', 'BLOCKED', 'REVOKED'])
 
 const SECRET_PATTERNS = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/i,
@@ -49,8 +50,8 @@ export function normalizeAccessStatus(value: unknown): AccessStatus | null {
   return STATUS_SET.has(status) ? (status as AccessStatus) : null
 }
 
-export function isDecisionAccessStatus(status: string): boolean {
-  return DECISION_STATUS_SET.has(status)
+export function isSuperadminAccessStatus(status: string): boolean {
+  return SUPERADMIN_STATUS_SET.has(status)
 }
 
 export function containsCredentialMaterial(value: unknown): boolean {
@@ -68,9 +69,17 @@ export function findCredentialMaterialField(fields: Record<string, unknown>): st
 
 export function statusTimestampPatch(status: AccessStatus) {
   const now = new Date()
-  if (status === 'RECEIVED_IN_VAULT') return { receivedAt: now }
-  if (status === 'APPROVED') return { approvedAt: now, revokedAt: null }
+  if (status === 'ACCESS_RECEIVED') return { receivedAt: now }
+  if (status === 'VERIFIED') return { approvedAt: now, revokedAt: null }
   if (status === 'REVOKED') return { revokedAt: now }
-  if (status === 'REJECTED') return { approvedAt: null, revokedAt: null }
+  if (status === 'BLOCKED') return { approvedAt: null, revokedAt: null }
   return {}
+}
+
+export function redactAccessRequestForRole<T extends { externalVaultRef: string | null; decisionNotes: string | null }>(
+  request: T,
+  isSuperAdmin: boolean,
+): T {
+  if (isSuperAdmin) return request
+  return { ...request, externalVaultRef: null, decisionNotes: null }
 }

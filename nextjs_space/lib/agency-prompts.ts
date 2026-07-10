@@ -6,6 +6,7 @@ import {
   openSourceAgencyToolType,
 } from '@/lib/open-source-marketing-tool-catalog'
 
+import { BETA_WORK_ORDER_TEMPLATES, betaWorkOrderTemplate } from '@/lib/work-orders'
 type BuiltInAgencyToolType =
   | 'SEO_AUDIT'
   | 'GBP_OPTIMIZATION'
@@ -17,7 +18,7 @@ type BuiltInAgencyToolType =
   | 'REVIEW_RESPONSE'
   | 'EMAIL_CAMPAIGN'
 
-export type AgencyToolType = BuiltInAgencyToolType | `OSS_${string}`
+export type AgencyToolType = BuiltInAgencyToolType | `OSS_${string}` | string
 export const AGENCY_TOOLS: { type: AgencyToolType; label: string; description: string; needsInput?: string }[] = [
   { type: 'SEO_AUDIT', label: 'SEO Audit', description: 'Full local SEO audit: technical, on-page, content gaps, link signals, quick wins.' },
   { type: 'GBP_OPTIMIZATION', label: 'GBP Optimization', description: 'Google Business Profile audit + 30/60/90 optimization plan.' },
@@ -28,6 +29,12 @@ export const AGENCY_TOOLS: { type: AgencyToolType; label: string; description: s
   { type: 'LOCAL_LANDING_PAGE', label: 'Local Landing Page', description: 'Draft a city/service landing page (hero, sections, FAQ, schema).', needsInput: 'Service + city (e.g. "AC repair Carmel IN")' },
   { type: 'REVIEW_RESPONSE', label: 'Review Response', description: 'Drafts an on-brand reply to a customer review.', needsInput: 'Paste the review text' },
   { type: 'EMAIL_CAMPAIGN', label: 'Email Campaign', description: '5-touch nurture sequence for the segment provided.', needsInput: 'Audience + goal' },
+  ...BETA_WORK_ORDER_TEMPLATES.map((template) => ({
+    type: template.type,
+    label: template.label,
+    description: template.description,
+    needsInput: template.requiredEvidence.join(', '),
+  })),
   ...OPEN_SOURCE_MARKETING_TOOLS.map((tool) => ({
     type: openSourceAgencyToolType(tool),
     label: tool.name,
@@ -156,6 +163,15 @@ export function buildAgencyPrompt(type: AgencyToolType, args: BuildArgs): { syst
       system += `\n\nDeliver a 5-touch nurture sequence:\n## Audience & Goal\n## Touch 1 — Welcome (subject + body)\n## Touch 2 — Value (subject + body)\n## Touch 3 — Proof (subject + body)\n## Touch 4 — Offer (subject + body)\n## Touch 5 — Break-up (subject + body)\n### Next Steps`
       user += `\nAudience + goal: ${userInput || '[infer from industry]'}\nWrite the sequence now.`
       break
+    default: {
+      const template = betaWorkOrderTemplate(type)
+      if (template) {
+        intelQuery = `${template.label} ${c.industry} ${loc} ${userInput}`
+        system += `\n\nYou are executing the beta work-order template "${template.label}". Use only the client snapshot, supplied evidence, and explicitly cited public knowledge-base context. Never claim account access, Google Business changes, website edits, social publishing, spend, outreach, or delivery unless the work order says a human approved it. Produce sections: ## Objective, ## Evidence Required, ## Current Read, ## Recommended Actions, ## Douglas Ops Actions, ## Ryan Field Actions, ## Approval / Safety Gates, ## Client-Facing Summary, ### Next Steps. Template instructions: ${template.aiInstructions}`
+        user += `\nTemplate: ${template.label}\nRequired evidence: ${template.requiredEvidence.join('; ')}\nOperator notes / supplied evidence:\n${userInput || '[none supplied yet — list exactly what Douglas or Ryan must collect before execution]'}\n\nCreate the beta work order now.`
+      }
+      break
+    }
   }
   return { system, user, intelQuery }
 }

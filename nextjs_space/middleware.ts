@@ -44,10 +44,13 @@ const TEAM_ONLY_INTERNAL_API_PATHS = new Set([
   '/api/leads/assess',
 ])
 
+const SAFE_API_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
 
 const PUBLIC_API_PATHS = new Set([
   '/api/agency/digest/daily',
   '/api/agency/intelligence/refresh-all',
+  '/api/health',
 ])
 
 const SELF_SERVICE_PUBLIC_API_PATHS = new Set([
@@ -60,9 +63,30 @@ const SELF_SERVICE_PUBLIC_API_PATHS = new Set([
 ])
 
 function isPublicApi(pathname: string): boolean {
-  if (pathname === '/api/auth' || pathname.startsWith('/api/auth/')) return true
+  if (isAuthApi(pathname)) return true
   if (PUBLIC_API_PATHS.has(pathname)) return true
   return !TEAM_ONLY_DOGFOOD_MODE && SELF_SERVICE_PUBLIC_API_PATHS.has(pathname)
+}
+
+function isAuthApi(pathname: string): boolean {
+  return pathname === '/api/auth' || pathname.startsWith('/api/auth/')
+}
+
+function previewWritesEnabled(): boolean {
+  return process.env.PREVIEW_WRITES_ENABLED === 'true'
+}
+
+function isMutatingApiRequest(req: NextRequest, pathname: string): boolean {
+  return pathname.startsWith('/api/') && !SAFE_API_METHODS.has(req.method.toUpperCase())
+}
+
+function previewWriteBlocked(req: NextRequest, pathname: string): boolean {
+  return (
+    process.env.VERCEL_ENV === 'preview' &&
+    !previewWritesEnabled() &&
+    isMutatingApiRequest(req, pathname) &&
+    !isAuthApi(pathname)
+  )
 }
 
 function isTeamOnlyHiddenPage(pathname: string): boolean {
@@ -93,8 +117,9 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   if (isTeamOnlyHiddenPage(pathname)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
     const url = req.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = token ? '/app' : '/login'
     url.search = ''
     return NextResponse.redirect(url)
   }
@@ -107,6 +132,13 @@ export async function middleware(req: NextRequest) {
   if (isTeamOnlyInternalApi(pathname)) {
     token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
     if (!token) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (previewWriteBlocked(req, pathname)) {
+    return NextResponse.json({
+      error: 'Preview writes are disabled until Preview credentials are isolated.',
+      code: 'PREVIEW_WRITES_DISABLED',
+    }, { status: 403 })
   }
 
   if (isPublic(pathname)) return NextResponse.next()

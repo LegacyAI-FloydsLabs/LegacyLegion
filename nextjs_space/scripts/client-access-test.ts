@@ -21,7 +21,7 @@ function modelBlock(schema: string, model: string) {
 function testNormalizers() {
   assert(normalizeAccessPlatform('google ads') === 'GOOGLE_ADS', 'platform normalizer should accept human text')
   assert(normalizeAccessPlatform('bad platform') === null, 'unknown platform must be rejected')
-  assert(normalizeAccessStatus('received in vault') === 'RECEIVED_IN_VAULT', 'status normalizer should accept human text')
+  assert(normalizeAccessStatus('access received') === 'ACCESS_RECEIVED', 'status normalizer should accept human text')
   assert(normalizeAccessStatus('published') === null, 'unknown status must be rejected')
 }
 
@@ -52,8 +52,9 @@ function testRouteContracts() {
 
   assert(listRoute.includes('requireInternalUser'), 'access intake list/create route must require an internal user')
   assert(listRoute.includes('findCredentialMaterialField'), 'access intake create route must reject raw credential material')
-  assert(updateRoute.includes('isAdminRole'), 'access decision route must check admin role')
-  assert(updateRoute.includes('Admin role required for access decisions'), 'non-admin access decisions must be rejected')
+  assert(updateRoute.includes('isSuperAdminRole'), 'access decision route must check superadmin role')
+  assert(updateRoute.includes('SUPERADMIN role required for credential references'), 'non-superadmin credential references must be rejected')
+  assert(updateRoute.includes('redactAccessRequestForRole'), 'access decision route must redact superadmin-only fields for non-superadmins')
   assert(panel.includes('Do not store passwords or recovery material here.'), 'workspace UI must warn against raw credential storage')
   assert(migration.includes('CREATE TABLE "ClientAccessRequest"'), 'migration must create access request table')
   assert(migration.includes('CREATE TABLE "ClientAccessEvent"'), 'migration must create access event table')

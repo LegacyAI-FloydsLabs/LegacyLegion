@@ -23,7 +23,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <Script src="https://apps.abacus.ai/chatllm/appllm-lib.js" strategy="afterInteractive" />
       </head>

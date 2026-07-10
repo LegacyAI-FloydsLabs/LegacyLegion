@@ -4,11 +4,16 @@ import { NextRequest } from 'next/server'
 import { requireInternalUser } from '@/lib/authz'
 import { AGENCY_TOOLS, BRAND_RULES } from '@/lib/agency-prompts'
 import { prisma } from '@/lib/db'
-import { dispatchTool, type ToolName } from '@/lib/agents/dispatcher'
+import { checkRateLimit, rateLimited } from '@/lib/rate-limit'
+import { runAgentLoop, type ChatMessage } from '@/lib/agents/loop'
 import { getPersona, type AgentPersona } from '@/lib/agents/registry'
 import { formatMemoryBlock, recallMemory, recordTurn } from '@/lib/agents/memory'
+import { getLLMProvider, type LLMProviderId } from '@/lib/llm-providers'
 
-type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string }
+import { logServerError, logServerEvent } from '@/lib/diagnostics'
+
+const PERSONA_CHAT_WINDOW_MS = 60 * 60 * 1000
+const PERSONA_CHAT_LIMIT = 60
 
 function toolsBlock(allowedTools: AgentPersona['allowedTools']): string {
   const tools = allowedTools === 'all'
@@ -30,25 +35,33 @@ function toolsBlock(allowedTools: AgentPersona['allowedTools']): string {
   return `<TOOLS_AVAILABLE>\nTOOLS YOU CAN CALL:\n${lines.join('\n') || '- No tools available for this persona.'}\n\nTo call a tool, output a single line in the form:\n→ TOOL_CALL: <ToolName> { ...args }\n</TOOLS_AVAILABLE>`
 }
 
-function parseToolCall(text: string): { name: ToolName; args: Record<string, any> } | null {
-  const line = text.split('\n').find((candidate) => candidate.trim().startsWith('→ TOOL_CALL:'))
-  if (!line) return null
-  const match = line.match(/^\s*→ TOOL_CALL:\s*([A-Z_]+)\s*(\{.*\})\s*$/)
-  if (!match) return null
-  try {
-    return { name: match[1] as ToolName, args: JSON.parse(match[2]) }
-  } catch {
-    return null
-  }
-}
-
 async function clientContext(clientId?: string): Promise<string> {
   if (!clientId) return ''
-  const client = await prisma.client.findUnique({ where: { id: clientId } })
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: {
+      workOrders: {
+        where: { status: { in: ['DRAFT', 'IN_PROGRESS', 'REVIEW'] } },
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        select: { title: true, type: true, status: true, approvalStatus: true },
+      },
+      accessRequests: {
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+        select: { platform: true, status: true, resourceUrl: true },
+      },
+    },
+  })
   if (!client) return ''
-  return `<CLIENT_CONTEXT>\nClient: ${client.businessName} (${client.industry}, ${client.city ?? 'Indianapolis'} ${client.state ?? 'IN'})\nTier: ${client.tier} • MRR: $${client.monthlyMRR}\nStatus: ${client.status}\nStrategy brief: ${client.strategyBrief || 'none'}\n</CLIENT_CONTEXT>`
+  const workOrders = client.workOrders.length
+    ? client.workOrders.map((item) => `- ${item.title} (${item.type}, ${item.status}, ${item.approvalStatus})`).join('\n')
+    : '- None active.'
+  const access = client.accessRequests.length
+    ? client.accessRequests.map((item) => `- ${item.platform}: ${item.status}${item.resourceUrl ? ` (${item.resourceUrl})` : ''}`).join('\n')
+    : '- No access requests recorded.'
+  return `<CLIENT_CONTEXT>\nClient: ${client.businessName} (${client.industry}, ${client.city ?? 'Indianapolis'} ${client.state ?? 'IN'})\nWebsite: ${client.website ?? 'not provided'}\nGoogle Business Profile: ${client.gbpUrl ?? 'not provided'}\nTier: ${client.tier} • MRR: $${client.monthlyMRR}\nStatus: ${client.status}\nStrategy brief: ${client.strategyBrief || 'none'}\nActive work orders:\n${workOrders}\nAccount access status:\n${access}\nRules: Do not claim account access, website edits, GBP edits, social publishing, outreach, or spend unless the access status and work-order approval explicitly support it. Mark unsupported claims as assumptions.\n</CLIENT_CONTEXT>`
 }
-
 
 export async function POST(req: NextRequest, { params }: { params: { persona: string } }) {
   const auth = await requireInternalUser()
@@ -64,12 +77,19 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
     return new Response('clientId is required for account-manager', { status: 400 })
   }
 
+  const limit = checkRateLimit(req, { bucket: 'agent-persona-chat', limit: PERSONA_CHAT_LIMIT, windowMs: PERSONA_CHAT_WINDOW_MS, identifier: userId })
+  if (!limit.allowed) return rateLimited(limit)
+
   const apiKey = process.env.ABACUSAI_API_KEY
-  if (!apiKey) return new Response('Service unavailable', { status: 503 })
+  if (!apiKey) {
+    logServerEvent('ai.call.not_configured', { userId, persona: persona.id, clientId })
+    return new Response('Service unavailable', { status: 503 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const message = String(body?.message ?? '').trim()
   if (!message) return new Response('Empty message', { status: 400 })
+  const provider = getLLMProvider((body?.provider as LLMProviderId) || 'auto')
 
   const { thread, turn } = await recordTurn({
     userId,
@@ -81,6 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
   })
 
   const recalled = await recallMemory({ userId, persona: persona.id, clientId, query: message, topK: 5 })
+  logServerEvent('ai.call.requested', { userId, persona: persona.id, clientId, threadId: thread.id })
   const system = [
     persona.systemPrompt,
     `<BRAND_RULES>\n${BRAND_RULES}\n</BRAND_RULES>`,
@@ -94,72 +115,62 @@ export async function POST(req: NextRequest, { params }: { params: { persona: st
     { role: 'user', content: message },
   ]
 
-  const upstream = await fetch('https://routellm.abacus.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'route-llm',
-      messages,
-      stream: true,
-      metadata: { persona: persona.id, clientId, hint: persona.modelHint },
-    }),
-  })
-
-  if (!upstream.ok || !upstream.body) return new Response('Generation service unavailable', { status: 502 })
-
   const ts = new TransformStream()
   const writer = ts.writable.getWriter()
   const encoder = new TextEncoder()
-  const reader = upstream.body.getReader()
-  const decoder = new TextDecoder()
-  let partial = ''
-  let assistantBuffer = ''
 
   ;(async () => {
+    const sse = (chunk: string) => writer.write(encoder.encode(chunk))
+    const dataFrame = (content: string) => sse(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`)
     try {
-      await writer.write(encoder.encode(`event: meta\ndata: ${JSON.stringify({ threadId: thread.id, turnId: turn.id, persona: persona.id })}\n\n`))
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        partial += decoder.decode(value, { stream: true })
-        const lines = partial.split('\n')
-        partial = lines.pop() ?? ''
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6).trim()
-            if (data !== '[DONE]') {
-              try {
-                assistantBuffer += JSON.parse(data)?.choices?.[0]?.delta?.content ?? ''
-              } catch {
-                // Preserve upstream frame even if it is not JSON.
-              }
-            }
-          }
-          await writer.write(encoder.encode(`${line}\n`))
-        }
-      }
+      await sse(`event: meta\ndata: ${JSON.stringify({ threadId: thread.id, turnId: turn.id, persona: persona.id })}\n\n`)
 
-      if (assistantBuffer.trim()) {
-        await recordTurn({ userId, persona: persona.id, clientId, threadId: thread.id, role: 'assistant', content: assistantBuffer.trim(), modelUsed: 'route-llm' })
-        const toolCall = parseToolCall(assistantBuffer)
-        if (toolCall) {
-          const toolResult = await dispatchTool(toolCall.name, toolCall.args, { userId, clientId, threadId: thread.id })
-          await recordTurn({
-            userId,
-            persona: persona.id,
-            clientId,
-            threadId: thread.id,
-            role: 'tool',
-            content: toolResult.outputMarkdown ?? JSON.stringify(toolResult.output ?? toolResult.error),
-            toolName: toolCall.name,
-            toolCallsJson: { args: toolCall.args, result: toolResult },
-          })
-          await writer.write(encoder.encode(`event: tool\ndata: ${JSON.stringify(toolResult)}\n\n`))
-        }
-      }
-      await writer.write(encoder.encode('data: [DONE]\n\n'))
+      const result = await runAgentLoop({
+        persona,
+        userId,
+        clientId,
+        threadId: thread.id,
+        modelId: provider.modelId,
+        modelHint: persona.modelHint,
+        apiKey,
+        messages,
+        signal: req.signal,
+        onEvent: async (event) => {
+          switch (event.type) {
+            case 'delta':
+              await dataFrame(event.content)
+              break
+            case 'status':
+              await dataFrame(`\n_${event.content}_\n`)
+              break
+            case 'tool_call':
+              await sse(`event: tool_call\ndata: ${JSON.stringify({ name: event.name, args: event.args })}\n\n`)
+              break
+            case 'tool_result':
+              await sse(`event: tool\ndata: ${JSON.stringify(event.result)}\n\n`)
+              break
+            case 'error':
+              await dataFrame(`\n_[agent: ${event.message}]_\n`)
+              break
+            case 'final':
+              break
+          }
+        },
+      })
+
+      logServerEvent('ai.call.completed', {
+        userId,
+        persona: persona.id,
+        clientId,
+        threadId: thread.id,
+        iterations: result.iterations,
+        tools: result.toolTurns.length,
+        stop: result.stopReason,
+      })
+      await sse('data: [DONE]\n\n')
     } catch (error) {
-      console.error('agent chat stream error', error)
+      logServerError('ai.call.stream_failed', error, { userId, persona: persona.id, clientId, threadId: thread.id })
+      try { await writer.write(encoder.encode('data: [DONE]\n\n')) } catch { /* stream already closed */ }
     } finally {
       try { await writer.close() } catch { /* noop */ }
     }

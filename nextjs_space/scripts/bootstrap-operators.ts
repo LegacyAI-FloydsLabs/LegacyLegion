@@ -3,10 +3,13 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+type OperatorRole = 'superadmin' | 'admin' | 'team'
+
 type OperatorSpec = {
   label: string
-  prefix: string
-  role: 'admin' | 'team'
+  primaryPrefix: string
+  fallbackPrefixes?: string[]
+  role: OperatorRole
 }
 
 type OperatorInput = {
@@ -14,12 +17,12 @@ type OperatorInput = {
   email: string
   name: string | null
   password: string
-  role: 'admin' | 'team'
+  role: OperatorRole
 }
 
 const OPERATORS: OperatorSpec[] = [
-  { label: 'admin operator', prefix: 'OPERATOR_ADMIN', role: 'admin' },
-  { label: 'field operator', prefix: 'OPERATOR_FIELD', role: 'team' },
+  { label: 'Douglas SUPERADMIN operator', primaryPrefix: 'OPERATOR_DOUGLAS', fallbackPrefixes: ['OPERATOR_ADMIN'], role: 'superadmin' },
+  { label: 'Ryan ADMIN operator', primaryPrefix: 'OPERATOR_RYAN', fallbackPrefixes: ['OPERATOR_FIELD'], role: 'admin' },
 ]
 
 function clean(value: string | undefined): string {
@@ -31,16 +34,30 @@ function isPlaceholder(value: string): boolean {
   return normalized.includes('example') || normalized.includes('changeme') || normalized.includes('password')
 }
 
-function readOperator(spec: OperatorSpec): OperatorInput | null {
-  const email = clean(process.env[`${spec.prefix}_EMAIL`]).toLowerCase()
-  const password = process.env[`${spec.prefix}_PASSWORD`] ?? ''
-  const name = clean(process.env[`${spec.prefix}_NAME`]) || null
 
-  if (!email && !password && !name) return null
-  if (!email || !password) throw new Error(`${spec.prefix}_EMAIL and ${spec.prefix}_PASSWORD are both required for ${spec.label}`)
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(`${spec.prefix}_EMAIL must be a valid email address`)
-  if (password.length < 12) throw new Error(`${spec.prefix}_PASSWORD must be at least 12 characters`)
-  if (isPlaceholder(email) || isPlaceholder(password)) throw new Error(`${spec.prefix} contains placeholder credentials`)
+function configuredPrefix(spec: OperatorSpec): string | null {
+  for (const prefix of [spec.primaryPrefix, ...(spec.fallbackPrefixes ?? [])]) {
+    const hasAnyValue = Boolean(
+      clean(process.env[`${prefix}_EMAIL`]) ||
+      clean(process.env[`${prefix}_PASSWORD`]) ||
+      clean(process.env[`${prefix}_NAME`]),
+    )
+    if (hasAnyValue) return prefix
+  }
+  return null
+}
+function readOperator(spec: OperatorSpec): OperatorInput | null {
+  const prefix = configuredPrefix(spec)
+  if (!prefix) return null
+
+  const email = clean(process.env[`${prefix}_EMAIL`]).toLowerCase()
+  const password = process.env[`${prefix}_PASSWORD`] ?? ''
+  const name = clean(process.env[`${prefix}_NAME`]) || null
+
+  if (!email || !password) throw new Error(`${prefix}_EMAIL and ${prefix}_PASSWORD are both required for ${spec.label}`)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(`${prefix}_EMAIL must be a valid email address`)
+  if (password.length < 12) throw new Error(`${prefix}_PASSWORD must be at least 12 characters`)
+  if (isPlaceholder(email) || isPlaceholder(password)) throw new Error(`${prefix} contains placeholder credentials`)
 
   return { label: spec.label, email, name, password, role: spec.role }
 }

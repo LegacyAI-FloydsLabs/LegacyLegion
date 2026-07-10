@@ -13,14 +13,24 @@ export default async function AgencyChatPage() {
   })
 
   return (
-    <Container size="xl">
-      <PageHeader
-        title="Agent Chat"
-        description="Talk to six LegacyLegion personas through RouteLLM. Client-scoped chats persist turns for memory."
-      />
-      <div className="mt-6">
+    <>
+      {/* Desktop: standard container + header */}
+      <div className="hidden lg:block">
+        <Container size="xl">
+          <PageHeader
+            title="Agent Chat"
+            description="Talk to personas or run the senior marketing runtime for LLM work, Douglas HIL tasks, and Ryan field assignments."
+          />
+          <div className="mt-6 pb-8">
+            <AgencyChatClient clients={clients} />
+          </div>
+        </Container>
+      </div>
+
+      {/* Mobile: no container/header padding — terminal fills viewport */}
+      <div className="lg:hidden">
         <AgencyChatClient clients={clients} />
       </div>
-    </Container>
+    </>
   )
 }

@@ -65,6 +65,10 @@ function testStaticSecurityContracts() {
   assert(middlewareSource.includes('TEAM_ONLY_PAGE_PATHS'), 'team-only mode must hide public self-service pages')
   assert(middlewareSource.includes('TEAM_ONLY_DISABLED_API_PATHS'), 'team-only mode must hard-disable public self-service APIs')
   assert(middlewareSource.includes('TEAM_ONLY_INTERNAL_API_PATHS'), 'team-only mode must require auth for internal lead APIs')
+  assert(middlewareSource.includes('SAFE_API_METHODS'), 'middleware must explicitly define safe read-only API methods')
+  assert(middlewareSource.includes('PREVIEW_WRITES_ENABLED'), 'Preview API writes must require an explicit deploy-time enable flag')
+  assert(middlewareSource.includes('PREVIEW_WRITES_DISABLED'), 'Preview write guard must return a machine-readable block code')
+  assert(middlewareSource.includes('isAuthApi'), 'Preview write guard must keep NextAuth routes callable')
 
   const publicApiPaths = readSetBody(middlewareSource, 'PUBLIC_API_PATHS')
   for (const path of ['/api/signup', '/api/partner/signup', '/api/agent/chat', '/api/agent/stub', '/api/leads', '/api/leads/assess']) {
@@ -132,12 +136,49 @@ async function testTeamOnlyMiddlewareContracts() {
   }
 }
 
+async function testPreviewWriteGuardContracts() {
+  const previousSecret = process.env.NEXTAUTH_SECRET
+  const previousVercelEnv = process.env.VERCEL_ENV
+  const previousPreviewWritesEnabled = process.env.PREVIEW_WRITES_ENABLED
+
+  process.env.NEXTAUTH_SECRET = '0123456789abcdef0123456789abcdef'
+  process.env.VERCEL_ENV = 'preview'
+  delete process.env.PREVIEW_WRITES_ENABLED
+
+  try {
+    const blockedWrite = await middleware(new NextRequest('https://legacy.test/api/agency/work-orders', { method: 'POST' }))
+    assert(blockedWrite.status === 403, 'Preview POST writes must be blocked by default')
+    const blockedBody = await blockedWrite.json()
+    assert(blockedBody.code === 'PREVIEW_WRITES_DISABLED', 'Preview write block must return a machine-readable code')
+
+    const authCallback = await middleware(new NextRequest('https://legacy.test/api/auth/callback/credentials', { method: 'POST' }))
+    assert(authCallback.status !== 403, 'Preview write guard must not block NextAuth credential callback')
+
+    const health = await middleware(new NextRequest('https://legacy.test/api/health', { method: 'GET' }))
+    assert(health.status !== 403, 'Preview write guard must allow read-only health checks')
+
+    process.env.PREVIEW_WRITES_ENABLED = 'true'
+    const enabledWrite = await middleware(new NextRequest('https://legacy.test/api/agency/work-orders', { method: 'POST' }))
+    assert(enabledWrite.status !== 403, 'Preview writes must be allowed only when PREVIEW_WRITES_ENABLED=true')
+  } finally {
+    if (previousSecret === undefined) delete process.env.NEXTAUTH_SECRET
+    else process.env.NEXTAUTH_SECRET = previousSecret
+
+    if (previousVercelEnv === undefined) delete process.env.VERCEL_ENV
+    else process.env.VERCEL_ENV = previousVercelEnv
+
+    if (previousPreviewWritesEnabled === undefined) delete process.env.PREVIEW_WRITES_ENABLED
+    else process.env.PREVIEW_WRITES_ENABLED = previousPreviewWritesEnabled
+  }
+}
+
 async function main() {
   testRolePredicates()
   testLeadAssessmentToken()
   testRateLimit()
   testStaticSecurityContracts()
   await testTeamOnlyMiddlewareContracts()
+  await testPreviewWriteGuardContracts()
   console.log('Security hardening contract tests passed')
 }
 

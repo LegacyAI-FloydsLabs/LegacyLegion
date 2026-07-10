@@ -26,6 +26,10 @@ export function isAdminRole(role: string | null | undefined): boolean {
   return role === SUPERADMIN_ROLE || role === ADMIN_ROLE
 }
 
+export function isSuperAdminRole(role: string | null | undefined): boolean {
+  return role === SUPERADMIN_ROLE
+}
+
 export function isPartnerRole(role: string | null | undefined): boolean {
   return role === PARTNER_ROLE
 }
@@ -61,6 +65,10 @@ export async function requireAdminUser(): Promise<AuthorizationResult> {
   return requireRole(isAdminRole)
 }
 
+
+export async function requireSuperAdminUser(): Promise<AuthorizationResult> {
+  return requireRole(isSuperAdminRole)
+}
 export async function requirePartnerUser(): Promise<AuthorizationResult> {
   return requireRole(isPartnerRole)
 }

@@ -28,6 +28,8 @@ const snapshot: ClientSnapshot = {
   notes: [],
   conversations: [],
   intelligenceBrief: null,
+  accessRequests: [],
+  prospects: [],
 }
 
 const html = buildClientSnapshotHtml(snapshot)

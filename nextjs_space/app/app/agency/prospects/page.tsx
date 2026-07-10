@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layouts/page-header'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ProspectWorkflow } from './_components/prospect-workflow'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,9 +31,10 @@ export default async function AllProspectsPage({ searchParams }: { searchParams?
       <PageHeader
         title="All Prospects"
         description="Net-new prospects persisted from Explorium and Apollo searches."
-        actions={<Link href="/app/agency/chat?persona=lead-gen-manager"><Button>Run Prospect Search</Button></Link>}
+        actions={null}
       />
 
+      <ProspectWorkflow clients={clients} />
       <Card className="mt-6 flex flex-wrap gap-2 p-3 text-sm">
         <Link href="/app/agency/prospects"><Button variant={!query.toString() ? 'default' : 'outline'} size="sm">All</Button></Link>
         <Link href="/app/agency/prospects?hasEmail=true"><Button variant={searchParams?.hasEmail === 'true' ? 'default' : 'outline'} size="sm">Has email</Button></Link>

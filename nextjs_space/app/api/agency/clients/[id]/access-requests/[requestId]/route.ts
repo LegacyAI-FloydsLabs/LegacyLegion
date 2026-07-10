@@ -1,13 +1,14 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { isAdminRole, requireInternalUser } from '@/lib/authz'
+import { isSuperAdminRole, requireInternalUser } from '@/lib/authz'
 import {
   cleanOptionalString,
   findCredentialMaterialField,
-  isDecisionAccessStatus,
+  isSuperadminAccessStatus,
   normalizeAccessStatus,
   statusTimestampPatch,
+  redactAccessRequestForRole,
 } from '@/lib/client-access'
 import { prisma } from '@/lib/db'
 
@@ -24,6 +25,7 @@ const ACCESS_INCLUDE = {
 export async function PATCH(req: NextRequest, { params }: { params: { id: string; requestId: string } }) {
   const auth = await requireInternalUser()
   if ('response' in auth) return auth.response
+  const isSuperAdmin = isSuperAdminRole(auth.role)
 
   const existing = await prisma.clientAccessRequest.findFirst({
     where: { id: params.requestId, clientId: params.id },
@@ -36,23 +38,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const eventNotes = cleanOptionalString(body?.eventNotes ?? body?.decisionNotes ?? body?.requestNotes, 2_000)
 
   if ('resourceUrl' in body) data.resourceUrl = cleanOptionalString(body.resourceUrl)
-  if ('externalVaultRef' in body) data.externalVaultRef = cleanOptionalString(body.externalVaultRef)
   if ('requestNotes' in body) data.requestNotes = cleanOptionalString(body.requestNotes, 2_000)
-  if ('decisionNotes' in body) data.decisionNotes = cleanOptionalString(body.decisionNotes, 2_000)
+
+  if ('externalVaultRef' in body || 'decisionNotes' in body) {
+    if (!isSuperAdmin) return NextResponse.json({ error: 'SUPERADMIN role required for credential references' }, { status: 403 })
+    if ('externalVaultRef' in body) data.externalVaultRef = cleanOptionalString(body.externalVaultRef)
+    if ('decisionNotes' in body) data.decisionNotes = cleanOptionalString(body.decisionNotes, 2_000)
+  }
 
   const nextStatus = 'status' in body ? normalizeAccessStatus(body.status) : null
   if ('status' in body && !nextStatus) return NextResponse.json({ error: 'Valid status required' }, { status: 400 })
-
-  if (nextStatus && isDecisionAccessStatus(nextStatus) && !isAdminRole(auth.role)) {
-    return NextResponse.json({ error: 'Admin role required for access decisions' }, { status: 403 })
+  if (nextStatus && isSuperadminAccessStatus(nextStatus) && !isSuperAdmin) {
+    return NextResponse.json({ error: 'SUPERADMIN role required for this access status' }, { status: 403 })
   }
 
   const mergedVaultRef = 'externalVaultRef' in data ? data.externalVaultRef : existing.externalVaultRef
-  if (nextStatus === 'RECEIVED_IN_VAULT' && !mergedVaultRef) {
-    return NextResponse.json({ error: 'externalVaultRef required when access is received in vault' }, { status: 400 })
+  if (nextStatus === 'ACCESS_RECEIVED' && !mergedVaultRef) {
+    return NextResponse.json({ error: 'External reference required when access is received' }, { status: 400 })
   }
-  if (nextStatus === 'APPROVED' && !mergedVaultRef) {
-    return NextResponse.json({ error: 'externalVaultRef required before approval' }, { status: 400 })
+  if (nextStatus === 'VERIFIED' && !mergedVaultRef) {
+    return NextResponse.json({ error: 'External reference required before verification' }, { status: 400 })
   }
 
   const unsafeField = findCredentialMaterialField({
@@ -69,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (nextStatus) {
     data.status = nextStatus
     Object.assign(data, statusTimestampPatch(nextStatus))
-    if (isDecisionAccessStatus(nextStatus)) data.approverId = auth.userId
+    if (isSuperadminAccessStatus(nextStatus)) data.approverId = auth.userId
   }
 
   const accessRequest = await prisma.clientAccessRequest.update({
@@ -89,5 +94,5 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: ACCESS_INCLUDE,
   })
 
-  return NextResponse.json({ accessRequest })
+  return NextResponse.json({ accessRequest: redactAccessRequestForRole(accessRequest, isSuperAdmin) })
 }

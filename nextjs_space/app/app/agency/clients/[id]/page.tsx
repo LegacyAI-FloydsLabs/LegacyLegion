@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/db'
 import { authOptions } from '@/lib/auth'
 import { ClientWorkspace } from './_components/client-workspace'
+import { isSuperAdminRole } from '@/lib/authz'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,16 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
   const client = await prisma.client.findUnique({
     where: { id: params.id },
     include: {
-      workOrders: { orderBy: { createdAt: 'desc' } },
+      workOrders: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          events: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            include: { actor: { select: { name: true, email: true } } },
+          },
+        },
+      },
       clientNotes: { orderBy: { createdAt: 'desc' }, include: { author: { select: { name: true, email: true } } } },
       prospects: { orderBy: { createdAt: 'desc' } },
       intelligence: true,
@@ -31,6 +41,7 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
   if (!client) notFound()
 
   const session = await getServerSession(authOptions)
+  const isSuperAdmin = isSuperAdminRole(session?.user?.role)
 
   return (
     <ClientWorkspace
@@ -42,10 +53,17 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
         churnedAt: client.churnedAt?.toISOString() ?? null,
         workOrders: client.workOrders.map((w: any) => ({
           ...w,
+          dueAt: w.dueAt?.toISOString() ?? null,
+          evidenceLinks: Array.isArray(w.evidenceLinks) ? w.evidenceLinks : [],
           createdAt: w.createdAt.toISOString(),
           updatedAt: w.updatedAt.toISOString(),
           generatedAt: w.generatedAt?.toISOString() ?? null,
           deliveredAt: w.deliveredAt?.toISOString() ?? null,
+          approvedAt: w.approvedAt?.toISOString() ?? null,
+          events: w.events.map((event: any) => ({
+            ...event,
+            createdAt: event.createdAt.toISOString(),
+          })),
         })),
         clientNotes: client.clientNotes.map((n: any) => ({
           ...n,
@@ -63,6 +81,8 @@ export default async function ClientWorkspacePage({ params }: { params: { id: st
         } : null,
         accessRequests: client.accessRequests.map((request: any) => ({
           ...request,
+          externalVaultRef: isSuperAdmin ? request.externalVaultRef : null,
+          decisionNotes: isSuperAdmin ? request.decisionNotes : null,
           requestedAt: request.requestedAt.toISOString(),
           receivedAt: request.receivedAt?.toISOString() ?? null,
           approvedAt: request.approvedAt?.toISOString() ?? null,

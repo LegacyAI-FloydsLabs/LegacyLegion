@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
+import { hashIdentifier, logServerEvent } from '@/lib/diagnostics'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -18,13 +19,24 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        const email = credentials?.email?.toLowerCase().trim() ?? ''
+        if (!email || !credentials?.password) {
+          logServerEvent('auth.credentials.rejected', { reason: 'missing_credentials' })
+          return null
+        }
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase().trim() },
+          where: { email },
         })
-        if (!user) return null
+        if (!user) {
+          logServerEvent('auth.credentials.rejected', { reason: 'unknown_user', emailHash: hashIdentifier(email) })
+          return null
+        }
         const ok = await bcrypt.compare(credentials.password, user.password)
-        if (!ok) return null
+        if (!ok) {
+          logServerEvent('auth.credentials.rejected', { reason: 'bad_password', userId: user.id, role: user.role })
+          return null
+        }
+        logServerEvent('auth.credentials.accepted', { userId: user.id, role: user.role })
         return {
           id: user.id,
           email: user.email,
