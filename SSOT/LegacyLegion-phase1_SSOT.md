@@ -1,7 +1,7 @@
 # LegacyLegion-phase1 SSOT (Single Source of Truth)
 **Created:** 2026-05-12T14:58:52-0400
 **Last Updated:** 2026-05-12T14:58:52-0400
-**Governance:** .supercache/ v1.7.0
+**Governance:** .supercache/ v1.7.2
 
 > **Compliance Notice:** This file must match the structure at
 > `.supercache/templates/ssot-template.md`. This is the authoritative
