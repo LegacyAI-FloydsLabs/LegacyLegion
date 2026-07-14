@@ -13,6 +13,7 @@ import {
   LayoutDashboard, Users, KanbanSquare, BarChart3, Calculator,
   Bot, Network, Upload, LogOut, PanelLeft, Sparkles,
   FileSearch, Wrench, Building2, ClipboardList, MessageSquare, Plus,
+  ShieldCheck,
 } from 'lucide-react'
 
 const UNIFIED_NAV = [
@@ -31,11 +32,12 @@ const UNIFIED_NAV = [
   { href: '/app/referrals', label: 'Referrals', icon: Network },
   { href: '/app/roi-calculator', label: 'ROI Calculator', icon: Calculator },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
+  { href: '/app/superadmin', label: 'Superadmin', icon: ShieldCheck },
 ]
 
 function visibleNavItems(role: string) {
   if (role === 'superadmin') return UNIFIED_NAV
-  return UNIFIED_NAV.filter((item) => item.href !== '/app/agent')
+  return UNIFIED_NAV.filter((item) => item.href !== '/app/agent' && item.href !== '/app/superadmin')
 }
 
 export function TeamShell({

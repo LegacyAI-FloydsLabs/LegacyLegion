@@ -7,7 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "tsx scripts/export-html-contract-test.ts && tsx scripts/open-source-marketing-tool-catalog-test.ts && tsx scripts/security-hardening-test.ts && tsx scripts/client-access-test.ts && tsx scripts/beta-ops-contract-test.ts && tsx scripts/marketing-runtime-contract-test.ts && tsx scripts/marketing-runtime-smoke-test.ts",
+    "test": "tsx scripts/export-html-contract-test.ts && tsx scripts/open-source-marketing-tool-catalog-test.ts && tsx scripts/security-hardening-test.ts && tsx scripts/client-access-test.ts && tsx scripts/beta-ops-contract-test.ts && tsx scripts/superadmin-console-contract-test.ts && tsx scripts/marketing-runtime-contract-test.ts && tsx scripts/marketing-runtime-smoke-test.ts",
     "bootstrap:operators": "tsx --require dotenv/config scripts/bootstrap-operators.ts",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:backup": "tsx --require dotenv/config scripts/postgres-backup.ts backup",

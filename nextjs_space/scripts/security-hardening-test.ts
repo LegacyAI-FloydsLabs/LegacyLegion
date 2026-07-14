@@ -151,6 +151,20 @@ async function testPreviewWriteGuardContracts() {
     const blockedBody = await blockedWrite.json()
     assert(blockedBody.code === 'PREVIEW_WRITES_DISABLED', 'Preview write block must return a machine-readable code')
 
+    const leadStatusUpdate = await middleware(new NextRequest('https://legacy.test/api/leads/lead_123', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CONTACTED' }),
+    }))
+    assert(leadStatusUpdate.status !== 403, 'Preview must allow the authenticated lead status update used by Kanban and lead detail')
+
+    const otherLeadUpdate = await middleware(new NextRequest('https://legacy.test/api/leads/lead_123', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignedToId: 'user_123' }),
+    }))
+    assert(otherLeadUpdate.status === 403, 'Preview must keep non-status lead updates blocked by default')
+
     const authCallback = await middleware(new NextRequest('https://legacy.test/api/auth/callback/credentials', { method: 'POST' }))
     assert(authCallback.status !== 403, 'Preview write guard must not block NextAuth credential callback')
 

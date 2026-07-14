@@ -80,12 +80,22 @@ function isMutatingApiRequest(req: NextRequest, pathname: string): boolean {
   return pathname.startsWith('/api/') && !SAFE_API_METHODS.has(req.method.toUpperCase())
 }
 
-function previewWriteBlocked(req: NextRequest, pathname: string): boolean {
+async function isPreviewLeadStatusUpdate(req: NextRequest, pathname: string): Promise<boolean> {
+  if (req.method.toUpperCase() !== 'PATCH' || !/^\/api\/leads\/[^/]+$/.test(pathname)) return false
+
+  const body = await req.clone().json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false
+  const fields = Object.keys(body)
+  return fields.length === 1 && fields[0] === 'status'
+}
+
+async function previewWriteBlocked(req: NextRequest, pathname: string): Promise<boolean> {
   return (
     process.env.VERCEL_ENV === 'preview' &&
     !previewWritesEnabled() &&
     isMutatingApiRequest(req, pathname) &&
-    !isAuthApi(pathname)
+    !isAuthApi(pathname) &&
+    !(await isPreviewLeadStatusUpdate(req, pathname))
   )
 }
 
@@ -134,7 +144,7 @@ export async function middleware(req: NextRequest) {
     if (!token) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  if (previewWriteBlocked(req, pathname)) {
+  if (await previewWriteBlocked(req, pathname)) {
     return NextResponse.json({
       error: 'Preview writes are disabled until Preview credentials are isolated.',
       code: 'PREVIEW_WRITES_DISABLED',

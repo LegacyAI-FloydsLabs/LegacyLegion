@@ -2,11 +2,14 @@ import { getServerSession } from 'next-auth'
 import type { Session } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
+import {
+  ADMIN_ROLE,
+  PARTNER_ROLE,
+  SUPERADMIN_ROLE,
+  TEAM_ROLE,
+} from '@/lib/roles'
 
-export const SUPERADMIN_ROLE = 'superadmin'
-export const ADMIN_ROLE = 'admin'
-export const TEAM_ROLE = 'team'
-export const PARTNER_ROLE = 'partner'
+export { ADMIN_ROLE, PARTNER_ROLE, SUPERADMIN_ROLE, TEAM_ROLE } from '@/lib/roles'
 
 const INTERNAL_ROLES = new Set([SUPERADMIN_ROLE, ADMIN_ROLE, TEAM_ROLE])
 

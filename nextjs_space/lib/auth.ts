@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { hashIdentifier, logServerEvent } from '@/lib/diagnostics'
+import { disableRole, isDisabledRole, TEAM_ROLE } from '@/lib/roles'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -31,6 +32,10 @@ export const authOptions: NextAuthOptions = {
           logServerEvent('auth.credentials.rejected', { reason: 'unknown_user', emailHash: hashIdentifier(email) })
           return null
         }
+        if (isDisabledRole(user.role)) {
+          logServerEvent('auth.credentials.rejected', { reason: 'account_disabled', userId: user.id })
+          return null
+        }
         const ok = await bcrypt.compare(credentials.password, user.password)
         if (!ok) {
           logServerEvent('auth.credentials.rejected', { reason: 'bad_password', userId: user.id, role: user.role })
@@ -51,6 +56,12 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = (user as any).id
         token.role = (user as any).role
+      } else if (token.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true },
+        })
+        token.role = current?.role ?? disableRole(TEAM_ROLE)
       }
       return token
     },
