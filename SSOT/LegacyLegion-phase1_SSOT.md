@@ -1,7 +1,7 @@
 # LegacyLegion-phase1 SSOT (Single Source of Truth)
 **Created:** 2026-05-12T14:58:52-0400
 **Last Updated:** 2026-05-12T14:58:52-0400
-**Governance:** .supercache/ v1.7.0
+**Governance:** .supercache/ v1.7.2
 
 > **Compliance Notice:** This file must match the structure at
 > `.supercache/templates/ssot-template.md`. This is the authoritative
@@ -169,6 +169,7 @@ Every sweep of this SSOT must append one or more entries here. Never edit or rem
 <!-- Never edit or remove existing entries — this is the authoritative change history. -->
 - 2026-05-18 03:58 EDT — Added secure client access-intake ledger with external-reference-only storage, admin approval controls, and audit events; verified focused contract test and full local build sequence.
 - 2026-05-18 07:18 EDT — Enabled team-only dogfood mode for Douglas/Ryan operations, hiding self-service entry points and verifying focused contracts plus full local build sequence.
+- 2026-06-24 01:07 EDT — Retired obsolete phase-verification scripts (`phase4-memory-test.ts`, `phase5-export-digest-test.ts`) from `nextjs_space/scripts/`. Updated `package.json` test chain to drop the corresponding references. Earlier SSOT rows (2026-05-18 00:54 EDT, 2026-05-18 01:44 EDT) remain as the historical record of when those scripts were originally exercised; the scripts themselves no longer ship with the project. Legitimate feature work in commits 5cb8368 and 4567b8e (memory.ts, pinecone.ts, client-snapshot.ts, daily-digest.ts, dispatcher.ts, route handlers) is untouched.
 
 ---
 

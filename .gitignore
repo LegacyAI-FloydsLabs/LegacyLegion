@@ -30,3 +30,17 @@ nextjs_space/external/marketing-open-source/
 /findings.md
 /progress.md
 /.planning/
+# local agent and harness state (never commit)
+/.claude/
+/.harness/
+/.omp/
+/.pi/
+/.supercache
+
+# generated dogfood evidence (never commit)
+/dogfood-output/
+
+# local governance/report overlays (never commit)
+/Issues/LegacyLegion_ISSUES.md
+/SSOT/LegacyLegion_SSOT.md
+/SSOT/repository_report.json

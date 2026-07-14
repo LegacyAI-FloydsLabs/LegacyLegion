@@ -28,7 +28,6 @@ The diff contains 56 changed paths, including the agent chat API, agency chat UI
 - `yarn build` completed successfully and generated 27 static pages plus dynamic API/app routes.
 - `yarn tsx scripts/phase1-dispatcher-test.ts` passed.
 - `yarn tsx scripts/phase2-prospects-test.ts` passed.
-- `yarn tsx scripts/phase5-export-digest-test.ts` passed against a local throwaway PostgreSQL verification database after Prisma schema sync.
 - `yarn lint` passed after committing an explicit ESLint flat config and aligning the ESLint 9-compatible plugin versions.
 - `yarn tsc --noEmit --pretty false` passed.
 - Fresh local Browser QA on `http://127.0.0.1:3106` confirmed closure of the previously reported high/medium code findings: logout now lands on `/login`, Agent Settings renders the widget snippet without hydration-error output, login exposes a `main` landmark, public audit/Add Lead/ROI calculator/partner application/pipeline/client workspace controls expose names, and the local QA database no longer contains generated Phase 4/Phase 5 fixture clients. External launch remains gated on production/environment verification.

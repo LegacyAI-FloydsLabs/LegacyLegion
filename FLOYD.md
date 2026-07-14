@@ -1,7 +1,7 @@
 # LegacyLegion — FLOYD.md
-**Version:** 1.7.0
+**Version:** 1.7.2
 **Initialized:** 2026-05-12T14:58:52-0400
-**Governance:** .supercache/ v1.7.0
+**Governance:** .supercache/ v1.7.2
 **Port:** 3106 (claimed in port-registry.json)
 **Drive:** SanDisk1Tb
 **Path:** /Volumes/SanDisk1Tb/LegacyLegion
@@ -73,7 +73,7 @@ It is **READ-ONLY**. Do not create, modify, or delete any file there.
 | **Primary Language** | TypeScript (Next.js application in `nextjs_space/`)                     |
 | **Runtime**          | Node.js with Yarn 4.10.3 via Corepack                                  |
 | **Module System**    | ESM / Next.js App Router                                                |
-| **Framework**        | Next.js 14.2.28, React 18.2.0                                           |
+| **Framework**        | Next.js 14.2.35, React 18.2.0                                           |
 | **Database**         | PostgreSQL via Prisma 6.7.0                                             |
 | **Port**             | **3106** — claimed in `/Volumes/SanDisk1Tb/SSOT/port-registry.json`    |
 | **Repository**       | `https://github.com/LegacyAI-FloydsLabs/LegacyLegion.git`              |
