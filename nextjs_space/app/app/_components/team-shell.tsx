@@ -7,42 +7,35 @@ import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { Logo } from '@/components/brand/logo'
 import { Button } from '@/components/ui/button'
-import { useMode, WorkspaceMode } from '@/lib/mode'
 import { DeviceVertical, useDevice } from '@/lib/device'
 import { ThemeToggle } from '@/components/theme-toggle'
 import {
   LayoutDashboard, Users, KanbanSquare, BarChart3, Calculator,
   Bot, Network, Upload, LogOut, PanelLeft, Sparkles,
-  Briefcase, FileSearch, Wrench, Target, Building2, ClipboardList,
-  Megaphone, ArrowRight, MessageSquare,
+  FileSearch, Wrench, Building2, ClipboardList, MessageSquare, Plus,
 } from 'lucide-react'
 
-const SALES_NAV = [
+const UNIFIED_NAV = [
   { href: '/app', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/app/leads', label: 'Leads', icon: Users },
   { href: '/app/pipeline', label: 'Pipeline', icon: KanbanSquare },
+  { href: '/app/agency', label: 'Clients', icon: Building2 },
+  { href: '/app/agency/work-orders', label: 'Work Orders', icon: ClipboardList },
   { href: '/app/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/app/intelligence', label: 'Intelligence', icon: Sparkles },
+  { href: '/app/intelligence', label: 'Lead Intelligence', icon: Sparkles },
+  { href: '/app/agency/intelligence', label: 'Client Intelligence', icon: Sparkles },
+  { href: '/app/agency/prospects', label: 'Prospects', icon: FileSearch },
+  { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
+  { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
   { href: '/app/import', label: 'Import', icon: Upload },
   { href: '/app/referrals', label: 'Referrals', icon: Network },
   { href: '/app/roi-calculator', label: 'ROI Calculator', icon: Calculator },
   { href: '/app/agent', label: 'Agent Settings', icon: Bot },
 ]
 
-const AGENCY_NAV = [
-  { href: '/app/agency', label: 'Clients', icon: Building2 },
-  { href: '/app/agency/work-orders', label: 'Work Orders', icon: ClipboardList },
-  { href: '/app/agency/tools', label: 'Agency Tools', icon: Wrench },
-  { href: '/app/agency/chat', label: 'Agent Chat', icon: MessageSquare },
-  { href: '/app/agency/prospects', label: 'Prospects', icon: FileSearch },
-  { href: '/app/agency/intelligence', label: 'Intelligence', icon: Sparkles },
-  { href: '/app/agent', label: 'Agent Settings', icon: Bot },
-]
-
-function visibleNavItems(mode: WorkspaceMode, role: string) {
-  const nav = mode === 'agency' ? AGENCY_NAV : SALES_NAV
-  if (role === 'superadmin') return nav
-  return nav.filter((item) => item.href !== '/app/agent')
+function visibleNavItems(role: string) {
+  if (role === 'superadmin') return UNIFIED_NAV
+  return UNIFIED_NAV.filter((item) => item.href !== '/app/agent')
 }
 
 export function TeamShell({
@@ -52,22 +45,10 @@ export function TeamShell({
   user: { id: string; name: string; email: string; role: string }
 }) {
   const pathname = usePathname() ?? ''
-  const router = useRouter()
   const [open, setOpen] = useState(false)
-  const { mode, setMode } = useMode()
   const { vertical, override, setOverride } = useDevice()
 
-  // If user lands on /app/agency* but mode is sales, sync mode to agency. And vice-versa.
-  useEffect(() => {
-    if (pathname.startsWith('/app/agency') && mode !== 'agency') setMode('agency')
-  }, [pathname, mode, setMode])
-
-  const NAV = visibleNavItems(mode, user.role)
-  const switchMode = (next: WorkspaceMode) => {
-    setMode(next)
-    if (next === 'agency' && !pathname.startsWith('/app/agency')) router.push('/app/agency')
-    if (next === 'sales' && pathname.startsWith('/app/agency')) router.push('/app')
-  }
+  const nav = visibleNavItems(user.role)
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,11 +56,9 @@ export function TeamShell({
         vertical={vertical}
         override={override}
         setOverride={setOverride}
-        mode={mode}
-        switchMode={switchMode}
         user={user}
         pathname={pathname}
-        nav={NAV}
+        nav={nav}
         open={open}
         setOpen={setOpen}
       >
@@ -93,8 +72,6 @@ function ShellForVertical({
   vertical,
   override,
   setOverride,
-  mode,
-  switchMode,
   user,
   pathname,
   nav,
@@ -105,11 +82,9 @@ function ShellForVertical({
   vertical: DeviceVertical
   override: DeviceVertical | null
   setOverride: (v: DeviceVertical | null) => void
-  mode: WorkspaceMode
-  switchMode: (next: WorkspaceMode) => void
   user: { id: string; name: string; email: string; role: string }
   pathname: string
-  nav: typeof SALES_NAV
+  nav: typeof UNIFIED_NAV
   open: boolean
   setOpen: (open: boolean) => void
   children: React.ReactNode
@@ -119,8 +94,6 @@ function ShellForVertical({
   if (vertical === 'mobile') {
     return (
       <MobileShell
-        mode={mode}
-        switchMode={switchMode}
         user={user}
         pathname={pathname}
         nav={nav}
@@ -137,8 +110,6 @@ function ShellForVertical({
   if (vertical === 'tablet') {
     return (
       <TabletShell
-        mode={mode}
-        switchMode={switchMode}
         user={user}
         pathname={pathname}
         nav={nav}
@@ -154,8 +125,6 @@ function ShellForVertical({
 
   return (
     <DesktopShell
-      mode={mode}
-      switchMode={switchMode}
       user={user}
       pathname={pathname}
       nav={nav}
@@ -167,58 +136,12 @@ function ShellForVertical({
   )
 }
 
-function ModeBadge({ mode, showLabel }: { mode: WorkspaceMode; showLabel?: boolean }) {
-  if (mode === 'agency') {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent-foreground">
-        <Briefcase className="h-3 w-3" /> Agency{showLabel ? ' Mode' : ''}
-      </span>
-    )
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-      <Target className="h-3 w-3" /> Sales{showLabel ? ' Mode' : ''}
-    </span>
-  )
-}
-
-function ModeSwitcher({ mode, switchMode }: { mode: WorkspaceMode; switchMode: (m: WorkspaceMode) => void }) {
-  return (
-    <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-background p-1">
-      <button
-        type="button"
-        onClick={() => switchMode('sales')}
-        className={cn(
-          'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-          mode === 'sales' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground'
-        )}
-        title="Sales / pipeline workspace"
-      >
-        <Target className="h-3.5 w-3.5" />
-        Sales
-      </button>
-      <button
-        type="button"
-        onClick={() => switchMode('agency')}
-        className={cn(
-          'flex items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-          mode === 'agency' ? 'bg-fuchsia-600/20 text-fuchsia-300' : 'text-muted-foreground hover:text-foreground'
-        )}
-        title="Agency workspace — work FOR clients"
-      >
-        <Briefcase className="h-3.5 w-3.5" />
-        Agency
-      </button>
-    </div>
-  )
-}
-
 function NavList({
   nav,
   pathname,
   onNavigate,
 }: {
-  nav: typeof SALES_NAV
+  nav: typeof UNIFIED_NAV
   pathname: string
   onNavigate?: () => void
 }) {
@@ -290,24 +213,24 @@ function OverrideChip({
   )
 }
 
-function PrimaryAction({ mode }: { mode: WorkspaceMode }) {
-  if (mode === 'sales') {
-    return (
-      <Link href="/app/leads/new">
-        <Button size="sm" variant="outline">+ New Lead</Button>
-      </Link>
-    )
-  }
+function PrimaryActions() {
   return (
-    <Link href="/app/agency/clients/new">
-      <Button size="sm" variant="outline">+ New Client</Button>
-    </Link>
+    <div className="flex items-center gap-1.5">
+      <Link href="/app/leads/new">
+        <Button size="sm" variant="outline" aria-label="New lead" title="New lead">
+          <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Lead</span>
+        </Button>
+      </Link>
+      <Link href="/app/agency/clients/new">
+        <Button size="sm" variant="outline" aria-label="New client" title="New client">
+          <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">Client</span>
+        </Button>
+      </Link>
+    </div>
   )
 }
 
 function MobileShell({
-  mode,
-  switchMode,
   user,
   pathname,
   nav,
@@ -317,11 +240,9 @@ function MobileShell({
   setOverride,
   children,
 }: {
-  mode: WorkspaceMode
-  switchMode: (m: WorkspaceMode) => void
   user: { id: string; name: string; email: string; role: string }
   pathname: string
-  nav: typeof SALES_NAV
+  nav: typeof UNIFIED_NAV
   open: boolean
   setOpen: (open: boolean) => void
   override: DeviceVertical | null
@@ -341,15 +262,11 @@ function MobileShell({
       >
         <div className="flex h-full flex-col">
           <div className="px-5 py-5 border-b border-border">
-            <Link href={mode === 'agency' ? '/app/agency' : '/app'} onClick={() => setOpen(false)}><Logo /></Link>
-          </div>
-          <div className="px-3 pt-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground px-1 pb-1.5">Mode</div>
-            <ModeSwitcher mode={mode} switchMode={switchMode} />
+            <Link href="/app" onClick={() => setOpen(false)}><Logo /></Link>
           </div>
           <nav className="flex-1 overflow-y-auto p-3">
             <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground px-3 pb-2 pt-1">
-              {mode === 'agency' ? 'Client Work' : 'Workspace'}
+              Command Center
             </div>
             <NavList nav={nav} pathname={pathname} onNavigate={() => setOpen(false)} />
           </nav>
@@ -365,10 +282,10 @@ function MobileShell({
             <PanelLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1 min-w-0">
-            <ModeBadge mode={mode} />
+            <span className="text-xs font-medium text-foreground">Command Center</span>
           </div>
           <OverrideChip override={override} setOverride={setOverride} />
-          <PrimaryAction mode={mode} />
+          <PrimaryActions />
           <ThemeToggle />
         </header>
         <main className="p-4 px-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))]">{children}</main>
@@ -400,8 +317,6 @@ function MobileShell({
 }
 
 function TabletShell({
-  mode,
-  switchMode,
   user,
   pathname,
   nav,
@@ -411,11 +326,9 @@ function TabletShell({
   setOverride,
   children,
 }: {
-  mode: WorkspaceMode
-  switchMode: (m: WorkspaceMode) => void
   user: { id: string; name: string; email: string; role: string }
   pathname: string
-  nav: typeof SALES_NAV
+  nav: typeof UNIFIED_NAV
   open: boolean
   setOpen: (open: boolean) => void
   override: DeviceVertical | null
@@ -436,7 +349,7 @@ function TabletShell({
       >
         <div className="flex h-full flex-col">
           <div className={cn('border-b border-border', collapsed ? 'px-2 py-5' : 'px-4 py-5')}>
-            <Link href={mode === 'agency' ? '/app/agency' : '/app'}>
+            <Link href="/app">
               {collapsed ? <Logo size="sm" /> : <Logo />}
             </Link>
           </div>
@@ -474,10 +387,10 @@ function TabletShell({
             <PanelLeft className={cn('h-5 w-5 transition-transform', collapsed && 'rotate-180')} />
           </Button>
           <div className="flex-1 text-sm text-muted-foreground flex items-center gap-2">
-            <ModeBadge mode={mode} showLabel />
+            <span className="font-medium text-foreground">Unified Command Center</span>
           </div>
           <OverrideChip override={override} setOverride={setOverride} />
-          <PrimaryAction mode={mode} />
+          <PrimaryActions />
           <ThemeToggle />
         </header>
         <main className="p-5">{children}</main>
@@ -487,8 +400,6 @@ function TabletShell({
 }
 
 function DesktopShell({
-  mode,
-  switchMode,
   user,
   pathname,
   nav,
@@ -496,11 +407,9 @@ function DesktopShell({
   setOverride,
   children,
 }: {
-  mode: WorkspaceMode
-  switchMode: (m: WorkspaceMode) => void
   user: { id: string; name: string; email: string; role: string }
   pathname: string
-  nav: typeof SALES_NAV
+  nav: typeof UNIFIED_NAV
   override: DeviceVertical | null
   setOverride: (v: DeviceVertical | null) => void
   children: React.ReactNode
@@ -510,17 +419,12 @@ function DesktopShell({
       <aside className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border bg-card">
         <div className="flex h-full flex-col">
           <div className="px-5 py-5 border-b border-border">
-            <Link href={mode === 'agency' ? '/app/agency' : '/app'}><Logo /></Link>
-          </div>
-
-          <div className="px-3 pt-3">
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground px-1 pb-1.5">Mode</div>
-            <ModeSwitcher mode={mode} switchMode={switchMode} />
+            <Link href="/app"><Logo /></Link>
           </div>
 
           <nav className="flex-1 overflow-y-auto p-3">
             <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground px-3 pb-2 pt-1">
-              {mode === 'agency' ? 'Client Work' : 'Workspace'}
+              Command Center
             </div>
             <NavList nav={nav} pathname={pathname} />
           </nav>
@@ -533,11 +437,11 @@ function DesktopShell({
       <div className="pl-64">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-md px-6">
           <div className="flex-1 text-sm text-muted-foreground flex items-center gap-2">
-            <ModeBadge mode={mode} showLabel />
-            <span>Doing the work {mode === 'agency' ? 'FOR clients' : 'to close new business'}</span>
+            <span className="font-medium text-foreground">Unified Command Center</span>
+            <span>Sales and client delivery in one workspace</span>
           </div>
           <OverrideChip override={override} setOverride={setOverride} />
-          <PrimaryAction mode={mode} />
+          <PrimaryActions />
           <ThemeToggle />
         </header>
         <main className="p-8">{children}</main>
